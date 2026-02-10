@@ -1,19 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
-import { Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-
-// Fix Leaflet default icon issue - must run before any marker creation
-if (typeof window !== 'undefined') {
-  const proto = L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown };
-  delete proto._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  });
-}
+import { useEffect, useRef } from 'react';
+import { CircleMarker, Popup, useMap } from 'react-leaflet';
 
 export interface DroneMarkerData {
   id: string;
@@ -29,24 +17,6 @@ interface DroneMarkerProps {
   data: DroneMarkerData;
 }
 
-function createDroneIcon(heading: number): L.DivIcon {
-  // Diamond/arrow shape pointing up, will be rotated by heading
-  const svg = `
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(${heading}deg);">
-      <path d="M14 2L22 14L14 26L6 14L14 2Z" fill="#06b6d4" stroke="#0e7490" stroke-width="1.5"/>
-      <circle cx="14" cy="14" r="3" fill="#0e7490"/>
-    </svg>
-  `;
-
-  return L.divIcon({
-    html: svg,
-    className: 'drone-marker',
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
-  });
-}
-
 function getBatteryColor(level: number): string {
   if (level > 60) return 'text-emerald-400';
   if (level > 30) return 'text-amber-400';
@@ -54,36 +24,27 @@ function getBatteryColor(level: number): string {
 }
 
 export function DroneMarker({ data }: DroneMarkerProps) {
-  const markerRef = useRef<L.Marker>(null);
-  const map = useMap();
-
-  const icon = useMemo(() => createDroneIcon(data.heading), [data.heading]);
+  const markerRef = useRef<L.CircleMarker>(null);
 
   // Animate position changes
   useEffect(() => {
     const marker = markerRef.current;
     if (marker) {
-      const currentLatLng = marker.getLatLng();
-      const targetLatLng = L.latLng(data.position[0], data.position[1]);
-
-      // Only animate if position has changed significantly
-      const distance = currentLatLng.distanceTo(targetLatLng);
-      if (distance > 1) {
-        // Use CSS transition for smooth movement
-        const element = marker.getElement();
-        if (element) {
-          element.style.transition = 'transform 0.9s linear';
-        }
-        marker.setLatLng(targetLatLng);
-      }
+      marker.setLatLng(data.position);
     }
   }, [data.position]);
 
   return (
-    <Marker
+    <CircleMarker
       ref={markerRef}
-      position={data.position}
-      icon={icon}
+      center={data.position}
+      radius={10}
+      pathOptions={{
+        color: '#0e7490',
+        fillColor: '#06b6d4',
+        fillOpacity: 0.9,
+        weight: 2,
+      }}
     >
       <Popup>
         <div className="space-y-1.5 min-w-[140px]">
@@ -104,6 +65,6 @@ export function DroneMarker({ data }: DroneMarkerProps) {
           </div>
         </div>
       </Popup>
-    </Marker>
+    </CircleMarker>
   );
 }
