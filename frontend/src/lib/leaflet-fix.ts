@@ -1,22 +1,26 @@
 // Fix Leaflet default icon issue in Next.js SSR environment
-// This must be imported before any Leaflet components
+// This file should be imported BEFORE react-leaflet
 
-import L from 'leaflet';
+export function fixLeafletIcon(): void {
+  if (typeof window === 'undefined') return;
 
-// Only run on client side
-if (typeof window !== 'undefined') {
-  // Delete the _getIconUrl method to prevent Leaflet from trying to load default icons
-  const proto = L.Icon.Default.prototype as unknown as Record<string, unknown>;
-  if ('_getIconUrl' in proto) {
-    delete proto._getIconUrl;
-  }
+  // Import Leaflet dynamically and apply the fix
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const L = require('leaflet');
 
-  // Set up default icon paths (even though we use custom icons, this prevents errors)
+  // Delete the _getIconUrl method to prevent auto-detection issues
+  type IconPrototype = { _getIconUrl?: unknown };
+  delete (L.Icon.Default.prototype as IconPrototype)._getIconUrl;
+
+  // Set explicit icon paths using local files
   L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+    iconUrl: '/leaflet/marker-icon.png',
+    shadowUrl: '/leaflet/marker-shadow.png',
   });
 }
 
-export {};
+// Auto-run the fix on client side
+if (typeof window !== 'undefined') {
+  fixLeafletIcon();
+}
