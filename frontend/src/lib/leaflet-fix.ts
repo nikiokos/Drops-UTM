@@ -6,8 +6,8 @@ import L from 'leaflet';
 // Only run on client side
 if (typeof window !== 'undefined') {
   // Delete the _getIconUrl method to prevent Leaflet from trying to load default icons
-  const proto = L.Icon.Default.prototype as Record<string, unknown>;
-  if (proto._getIconUrl) {
+  const proto = L.Icon.Default.prototype as unknown as Record<string, unknown>;
+  if ('_getIconUrl' in proto) {
     delete proto._getIconUrl;
   }
 
