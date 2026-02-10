@@ -68,7 +68,7 @@ export function EmergencyBanner() {
   // Show pending confirmation banner if any
   if (pendingCount > 0) {
     const pending = pendingConfirmations[0];
-    const config = SEVERITY_CONFIG[pending.incident.severity];
+    const config = SEVERITY_CONFIG[pending.incident?.severity] || SEVERITY_CONFIG.warning;
     const Icon = config.icon;
     const timeoutAt = new Date(pending.timeoutAt);
     const timeLeft = Math.max(0, Math.floor((timeoutAt.getTime() - Date.now()) / 1000));
@@ -107,7 +107,7 @@ export function EmergencyBanner() {
 
   // Show active incident banner
   if (topIncident) {
-    const config = SEVERITY_CONFIG[topIncident.severity];
+    const config = SEVERITY_CONFIG[topIncident.severity] || SEVERITY_CONFIG.warning;
     const Icon = config.icon;
 
     return (

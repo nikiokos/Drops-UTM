@@ -112,9 +112,9 @@ export function EmergencyConfirmationModal({ open, onOpenChange }: ConfirmationM
     }
   };
 
-  if (!pending) return null;
+  if (!pending || !pending.incident) return null;
 
-  const config = SEVERITY_CONFIG[pending.incident.severity];
+  const config = SEVERITY_CONFIG[pending.incident.severity] || SEVERITY_CONFIG.warning;
   const Icon = config.icon;
 
   return (
