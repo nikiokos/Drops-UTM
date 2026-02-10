@@ -4,9 +4,9 @@
 export function fixLeafletIcon(): void {
   if (typeof window === 'undefined') return;
 
-  // Import Leaflet dynamically and apply the fix
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const L = require('leaflet');
+  // Import Leaflet and apply the fix
+  // Using require for synchronous loading
+  const L = require('leaflet') as typeof import('leaflet');
 
   // Delete the _getIconUrl method to prevent auto-detection issues
   type IconPrototype = { _getIconUrl?: unknown };
