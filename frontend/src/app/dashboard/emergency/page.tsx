@@ -205,7 +205,7 @@ export default function EmergencyDashboardPage() {
             {pendingConfirmations.map((pending) => {
               const timeoutAt = new Date(pending.timeoutAt);
               const timeLeft = Math.max(0, Math.floor((timeoutAt.getTime() - Date.now()) / 1000));
-              const config = SEVERITY_CONFIG[pending.incident.severity];
+              const config = SEVERITY_CONFIG[pending.incident?.severity] || SEVERITY_CONFIG.warning;
               const Icon = config.icon;
 
               return (
@@ -282,8 +282,8 @@ export default function EmergencyDashboardPage() {
           ) : (
             <div className="space-y-3">
               {activeIncidents.map((incident) => {
-                const severityConfig = SEVERITY_CONFIG[incident.severity];
-                const statusConfig = STATUS_CONFIG[incident.status];
+                const severityConfig = SEVERITY_CONFIG[incident.severity] || SEVERITY_CONFIG.warning;
+                const statusConfig = STATUS_CONFIG[incident.status] || STATUS_CONFIG.active;
                 const Icon = severityConfig.icon;
 
                 return (

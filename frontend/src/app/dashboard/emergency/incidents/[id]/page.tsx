@@ -127,8 +127,8 @@ export default function IncidentDetailPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const severityConfig = SEVERITY_CONFIG[incident.severity];
-  const statusConfig = STATUS_CONFIG[incident.status];
+  const severityConfig = SEVERITY_CONFIG[incident.severity] || SEVERITY_CONFIG.warning;
+  const statusConfig = STATUS_CONFIG[incident.status] || STATUS_CONFIG.active;
   const SeverityIcon = severityConfig.icon;
 
   const currentBlackbox = blackboxData[playbackIndex];

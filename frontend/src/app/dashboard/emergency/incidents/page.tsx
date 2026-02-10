@@ -167,8 +167,8 @@ export default function IncidentsListPage() {
           ) : (
             <div className="space-y-2">
               {incidents.map((incident) => {
-                const severityConfig = SEVERITY_CONFIG[incident.severity];
-                const statusConfig = STATUS_CONFIG[incident.status];
+                const severityConfig = SEVERITY_CONFIG[incident.severity] || SEVERITY_CONFIG.warning;
+                const statusConfig = STATUS_CONFIG[incident.status] || STATUS_CONFIG.active;
                 const Icon = severityConfig.icon;
 
                 return (
