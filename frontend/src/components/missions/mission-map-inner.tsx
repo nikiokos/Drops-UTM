@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/leaflet-fix';
 import { useEffect, useState, useCallback } from 'react';
 import {
   MapContainer,

@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/leaflet-fix';
 import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents, Polyline, Polygon, Circle, Tooltip } from 'react-leaflet';
 import { useTheme } from 'next-themes';
