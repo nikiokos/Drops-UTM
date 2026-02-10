@@ -1,6 +1,40 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { Component, type ReactNode } from 'react';
+
+// Error boundary to catch Leaflet cleanup errors
+class MapErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    // Silently handle Leaflet cleanup errors
+    if (error.message?.includes('removeChild')) {
+      console.warn('Leaflet cleanup error caught:', error.message);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="flex h-full items-center justify-center bg-card rounded-lg border">
+          <p className="text-sm text-muted-foreground">Map unavailable</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface MarkerData {
   id: string;
@@ -70,7 +104,9 @@ const MapInner = dynamic(
 export function MapView({ center = [37.7749, -122.4194], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], className, trackingId }: MapViewProps) {
   return (
     <div className={className}>
-      <MapInner center={center} zoom={zoom} markers={markers} polylines={polylines} polygons={polygons} circles={circles} droneMarkers={droneMarkers} trackingId={trackingId} />
+      <MapErrorBoundary>
+        <MapInner center={center} zoom={zoom} markers={markers} polylines={polylines} polygons={polygons} circles={circles} droneMarkers={droneMarkers} trackingId={trackingId} />
+      </MapErrorBoundary>
     </div>
   );
 }

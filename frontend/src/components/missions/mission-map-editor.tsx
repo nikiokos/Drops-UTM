@@ -1,7 +1,41 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { Component, type ReactNode } from 'react';
 import { Waypoint } from '@/store/missions.store';
+
+// Error boundary to catch Leaflet cleanup errors
+class MapErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    // Silently handle Leaflet cleanup errors
+    if (error.message?.includes('removeChild')) {
+      console.warn('Leaflet cleanup error caught:', error.message);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="flex h-full items-center justify-center bg-card rounded-lg border">
+          <p className="text-sm text-muted-foreground">Map unavailable</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export type EditorMode = 'select' | 'add' | 'draw' | 'hub-to-hub';
 
@@ -56,20 +90,22 @@ export function MissionMapEditor({
 
   return (
     <div className={className}>
-      <MissionMapInner
-        center={center}
-        zoom={13}
-        waypoints={waypoints}
-        selectedWaypointId={selectedWaypointId}
-        mode={mode}
-        departureHub={departureHub}
-        arrivalHub={arrivalHub}
-        hubs={hubs}
-        onWaypointClick={onWaypointClick}
-        onWaypointMove={onWaypointMove}
-        onMapClick={onMapClick}
-        onHubSelect={onHubSelect}
-      />
+      <MapErrorBoundary>
+        <MissionMapInner
+          center={center}
+          zoom={13}
+          waypoints={waypoints}
+          selectedWaypointId={selectedWaypointId}
+          mode={mode}
+          departureHub={departureHub}
+          arrivalHub={arrivalHub}
+          hubs={hubs}
+          onWaypointClick={onWaypointClick}
+          onWaypointMove={onWaypointMove}
+          onMapClick={onMapClick}
+          onHubSelect={onHubSelect}
+        />
+      </MapErrorBoundary>
     </div>
   );
 }
