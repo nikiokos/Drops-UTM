@@ -1,0 +1,283 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 220 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
+    --primary: 185 80% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 15% 93%;
+    --secondary-foreground: 220 25% 25%;
+    --muted: 210 15% 93%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 210 15% 90%;
+    --accent-foreground: 220 30% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 15% 88%;
+    --input: 210 15% 88%;
+    --ring: 185 80% 40%;
+    --radius: 0.375rem;
+
+    --hud-cyan: 185 80% 40%;
+    --hud-green: 160 65% 40%;
+    --hud-amber: 38 90% 50%;
+    --hud-red: 0 72% 51%;
+    --hud-glow: 0 0 12px hsl(185 80% 40% / 0.25);
+  }
+
+  .dark {
+    --background: 220 40% 4%;
+    --foreground: 195 20% 90%;
+    --card: 220 35% 7%;
+    --card-foreground: 195 20% 90%;
+    --popover: 220 35% 7%;
+    --popover-foreground: 195 20% 90%;
+    --primary: 185 80% 45%;
+    --primary-foreground: 220 40% 4%;
+    --secondary: 220 30% 12%;
+    --secondary-foreground: 195 20% 85%;
+    --muted: 220 25% 12%;
+    --muted-foreground: 215 15% 50%;
+    --accent: 220 30% 14%;
+    --accent-foreground: 195 20% 90%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 25% 13%;
+    --input: 220 25% 13%;
+    --ring: 185 80% 45%;
+
+    --hud-cyan: 185 80% 45%;
+    --hud-green: 160 65% 45%;
+    --hud-amber: 38 90% 55%;
+    --hud-red: 0 72% 51%;
+    --hud-glow: 0 0 12px hsl(185 80% 45% / 0.3);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-outfit), system-ui, sans-serif;
+  }
+}
+
+/* === HUD FRAME COMPONENT === */
+@layer components {
+  .hud-frame {
+    @apply relative rounded border border-border bg-card;
+    box-shadow: inset 0 1px 0 hsl(185 80% 45% / 0.05);
+  }
+
+  .hud-frame::before,
+  .hud-frame::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: hsl(185 80% 45% / 0.4);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .hud-frame::before {
+    top: -1px;
+    left: -1px;
+    border-top: 1.5px solid;
+    border-left: 1.5px solid;
+    border-radius: 2px 0 0 0;
+  }
+
+  .hud-frame::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 1.5px solid;
+    border-right: 1.5px solid;
+    border-radius: 0 0 2px 0;
+  }
+
+  .hud-glow {
+    box-shadow: var(--hud-glow);
+  }
+
+  /* Scanline overlay for atmosphere */
+  .hud-scanlines {
+    position: relative;
+  }
+  .hud-scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(185 80% 45% / 0.015) 2px,
+      hsl(185 80% 45% / 0.015) 4px
+    );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* Grid background pattern */
+  .hud-grid-bg {
+    background-image:
+      linear-gradient(hsl(185 80% 45% / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(185 80% 45% / 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Data readout style */
+  .hud-readout {
+    font-family: var(--font-mono), monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* Stat value style */
+  .hud-value {
+    font-family: var(--font-mono), monospace;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: hsl(var(--primary));
+  }
+}
+
+/* === STATUS ANIMATIONS === */
+@layer utilities {
+  .text-status-active { @apply text-cyan-400; }
+  .text-status-warning { @apply text-amber-400; }
+  .text-status-danger { @apply text-red-400; }
+  .text-status-success { @apply text-emerald-400; }
+  .text-status-idle { @apply text-gray-500; }
+
+  .animate-pulse-cyan {
+    animation: pulse-glow-cyan 2s ease-in-out infinite;
+  }
+  @keyframes pulse-glow-cyan {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px hsl(185 80% 45% / 0.2); }
+    50% { opacity: 0.7; box-shadow: 0 0 8px hsl(185 80% 45% / 0.4); }
+  }
+
+  .animate-pulse-red {
+    animation: pulse-glow-red 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-glow-red {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px hsl(0 72% 51% / 0.2); }
+    50% { opacity: 0.7; box-shadow: 0 0 8px hsl(0 72% 51% / 0.5); }
+  }
+
+  .animate-radar {
+    animation: radar-sweep 4s linear infinite;
+  }
+  @keyframes radar-sweep {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out both;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out both;
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Map tooltip & popup overrides */
+.map-tooltip-lg {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  font-family: var(--font-mono), monospace !important;
+  letter-spacing: 0.03em !important;
+  padding: 6px 12px !important;
+  background: hsl(0 0% 100% / 0.95) !important;
+  color: hsl(220 30% 15%) !important;
+  border: 1px solid hsl(185 80% 40% / 0.4) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.15) !important;
+}
+
+.dark .map-tooltip-lg {
+  background: hsl(220 35% 10% / 0.92) !important;
+  color: hsl(195 20% 90%) !important;
+  border: 1px solid hsl(185 80% 45% / 0.3) !important;
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.4) !important;
+}
+
+.map-tooltip-lg::before {
+  border-top-color: hsl(185 80% 40% / 0.4) !important;
+}
+
+.dark .map-tooltip-lg::before {
+  border-top-color: hsl(185 80% 45% / 0.3) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  font-family: var(--font-mono), monospace !important;
+  background: hsl(0 0% 100% / 0.95) !important;
+  color: hsl(220 30% 15%) !important;
+  border: 1px solid hsl(185 80% 40% / 0.4) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.15) !important;
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background: hsl(220 35% 10% / 0.92) !important;
+  color: hsl(195 20% 90%) !important;
+  border: 1px solid hsl(185 80% 45% / 0.3) !important;
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.4) !important;
+}
+
+.leaflet-popup-tip {
+  background: hsl(0 0% 100% / 0.95) !important;
+}
+
+.dark .leaflet-popup-tip {
+  background: hsl(220 35% 10% / 0.92) !important;
+}
+
+/* Drone marker styles */
+.drone-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.drone-marker svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease-out;
+}
+
+.drone-marker:hover svg {
+  filter: drop-shadow(0 3px 6px rgba(6, 182, 212, 0.5));
+}
+
+/* Staggered delays for child animations */
+.stagger-children > * {
+  @apply animate-fade-in;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }

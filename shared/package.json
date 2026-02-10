@@ -1,0 +1,17 @@
+{
+  "name": "@drops-utm/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript types for DROPS UTM",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
