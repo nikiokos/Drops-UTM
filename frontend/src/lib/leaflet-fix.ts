@@ -6,8 +6,10 @@ import L from 'leaflet';
 // Only run on client side
 if (typeof window !== 'undefined') {
   // Delete the _getIconUrl method to prevent Leaflet from trying to load default icons
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  const proto = L.Icon.Default.prototype as Record<string, unknown>;
+  if (proto._getIconUrl) {
+    delete proto._getIconUrl;
+  }
 
   // Set up default icon paths (even though we use custom icons, this prevents errors)
   L.Icon.Default.mergeOptions({
