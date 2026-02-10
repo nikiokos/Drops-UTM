@@ -4,6 +4,17 @@ import { useEffect, useRef, useMemo } from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
+// Fix Leaflet default icon issue - must run before any marker creation
+if (typeof window !== 'undefined') {
+  const proto = L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown };
+  delete proto._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  });
+}
+
 export interface DroneMarkerData {
   id: string;
   position: [number, number];
