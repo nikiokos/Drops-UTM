@@ -329,7 +329,7 @@ export default function ControlCenterPage() {
         hubMarkers.reduce((sum, m) => sum + m.position[1], 0) / hubMarkers.length,
       ] as [number, number];
     }
-    return [37.7749, -122.4194] as [number, number];
+    return [38.5, 23.8] as [number, number];
   }, [selectedDrone, hubMarkers]);
 
   return (

@@ -101,7 +101,7 @@ const MapInner = dynamic(
   { ssr: false, loading: () => <div className="flex h-full items-center justify-center bg-card rounded-lg border"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> },
 );
 
-export function MapView({ center = [37.7749, -122.4194], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], className, trackingId }: MapViewProps) {
+export function MapView({ center = [38.5, 23.8], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], className, trackingId }: MapViewProps) {
   return (
     <div className={className}>
       <MapErrorBoundary>

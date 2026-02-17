@@ -86,7 +86,7 @@ export function MissionMapEditor({
       ]
     : departureHub?.location
     ? [departureHub.location.latitude, departureHub.location.longitude]
-    : [37.7749, -122.4194];
+    : [38.5, 23.8];
 
   return (
     <div className={className}>
