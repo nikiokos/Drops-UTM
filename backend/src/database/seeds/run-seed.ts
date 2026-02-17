@@ -24,16 +24,21 @@ async function runSeed() {
 
   // ── Clear existing data ──
   logger.log('Clearing existing data...');
-  await dataSource.getRepository(BlackboxEntry).clear();
-  await dataSource.getRepository(EmergencyIncident).clear();
-  await dataSource.getRepository(EmergencyProtocol).clear();
-  await dataSource.getRepository(Conflict).clear();
-  await dataSource.getRepository(AirspaceZone).clear();
-  await dataSource.getRepository(Flight).clear();
-  await dataSource.getRepository(Drone).clear();
-  await dataSource.getRepository(Hub).clear();
-  await dataSource.getRepository(User).clear();
-  await dataSource.getRepository(Organization).clear();
+  const queryRunner = dataSource.createQueryRunner();
+  await queryRunner.query('PRAGMA foreign_keys = OFF');
+  await queryRunner.query('DELETE FROM blackbox_entries');
+  await queryRunner.query('DELETE FROM emergency_incidents');
+  await queryRunner.query('DELETE FROM emergency_protocols');
+  await queryRunner.query('DELETE FROM conflicts');
+  await queryRunner.query('DELETE FROM airspace_zones');
+  await queryRunner.query('DELETE FROM flights');
+  await queryRunner.query('DELETE FROM drones');
+  await queryRunner.query('DELETE FROM device_registrations');
+  await queryRunner.query('DELETE FROM hubs');
+  await queryRunner.query('DELETE FROM users');
+  await queryRunner.query('DELETE FROM organizations');
+  await queryRunner.query('PRAGMA foreign_keys = ON');
+  await queryRunner.release();
   logger.log('Existing data cleared');
 
   // ── Organization ──
