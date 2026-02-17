@@ -1,12 +1,10 @@
 // Fix Leaflet default icon issue in Next.js SSR environment
 // This file should be imported BEFORE react-leaflet
 
+import L from 'leaflet';
+
 export function fixLeafletIcon(): void {
   if (typeof window === 'undefined') return;
-
-  // Import Leaflet and apply the fix
-  // Using require for synchronous loading
-  const L = require('leaflet') as typeof import('leaflet');
 
   // Delete the _getIconUrl method to prevent auto-detection issues
   type IconPrototype = { _getIconUrl?: unknown };

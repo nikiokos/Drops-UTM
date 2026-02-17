@@ -29,12 +29,15 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
-    "prettier": "^3.4.2",
     "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
     "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "puppeteer": "^24.37.2"
   }
 }

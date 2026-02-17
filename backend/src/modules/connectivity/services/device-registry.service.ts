@@ -44,10 +44,16 @@ export class DeviceRegistryService {
       const existing = await this.registrationRepository.findOne({
         where: { deviceIdentifier },
       });
-      if (existing) {
-        throw new BadRequestException(
-          `Device ${deviceIdentifier} is already registered`,
-        );
+      if (existing && existing.registrationStatus !== 'revoked') {
+        // Return existing active registration instead of erroring
+        return existing;
+      }
+      if (existing && existing.registrationStatus === 'revoked') {
+        // Re-activate revoked registration
+        existing.registrationStatus = 'pending';
+        existing.connectionStatus = 'offline';
+        existing.supportedProtocols = dto.supportedProtocols;
+        return this.registrationRepository.save(existing);
       }
     } else if (dto.deviceType === 'gateway') {
       if (!dto.hubId) {
@@ -58,10 +64,16 @@ export class DeviceRegistryService {
       const existing = await this.registrationRepository.findOne({
         where: { deviceIdentifier },
       });
-      if (existing) {
-        throw new BadRequestException(
-          `A gateway is already registered for this hub`,
-        );
+      if (existing && existing.registrationStatus !== 'revoked') {
+        // Return existing active registration instead of erroring
+        return existing;
+      }
+      if (existing && existing.registrationStatus === 'revoked') {
+        // Re-activate revoked registration
+        existing.registrationStatus = 'pending';
+        existing.connectionStatus = 'offline';
+        existing.supportedProtocols = dto.supportedProtocols;
+        return this.registrationRepository.save(existing);
       }
     } else {
       deviceIdentifier = `gcs-${Date.now()}`;

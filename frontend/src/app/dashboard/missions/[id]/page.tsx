@@ -149,10 +149,19 @@ export default function MissionDetailPage() {
   const isEditable = mission?.status === 'draft';
   const isExecuting = mission?.status === 'executing';
   const isPaused = mission?.status === 'paused';
-  const canStart = mission?.status === 'draft' || mission?.status === 'scheduled';
+  const hasDrone = !!droneId;
+  const hasWaypoints = waypoints.length > 0;
+  const canStart = (mission?.status === 'draft' || mission?.status === 'scheduled') && hasDrone && hasWaypoints;
   const canPause = isExecuting;
   const canResume = isPaused;
   const canAbort = isExecuting || isPaused;
+
+  // Validation messages for start button
+  const startValidationMessage = !hasDrone
+    ? 'Assign a drone before starting'
+    : !hasWaypoints
+    ? 'Add at least one waypoint'
+    : null;
 
   const departureHub = hubs.find((h) => h.id === departureHubId);
   const arrivalHub = hubs.find((h) => h.id === arrivalHubId);
@@ -267,11 +276,19 @@ export default function MissionDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {canStart && (
-            <Button onClick={handleStart} disabled={isLoading}>
-              <Play className="h-4 w-4 mr-2" />
-              Start Mission
-            </Button>
+          {(mission?.status === 'draft' || mission?.status === 'scheduled') && (
+            <div className="flex items-center gap-2">
+              {startValidationMessage && (
+                <span className="text-sm text-amber-500 flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  {startValidationMessage}
+                </span>
+              )}
+              <Button onClick={handleStart} disabled={!canStart || isLoading}>
+                <Play className="h-4 w-4 mr-2" />
+                Start Mission
+              </Button>
+            </div>
           )}
           {canPause && (
             <Button variant="outline" onClick={handlePause} disabled={isLoading}>

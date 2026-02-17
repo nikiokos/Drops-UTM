@@ -6,6 +6,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { CommunicationProtocol } from '@drops-utm/shared';
 import { dronesApi, hubsApi } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -54,6 +55,7 @@ const defaultForm = {
 
 export default function DronesPage() {
   const queryClient = useQueryClient();
+  const { canCreateDrone, canEditDrone, canDeleteDrone } = usePermissions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDrone, setEditingDrone] = useState<DroneRecord | null>(null);
@@ -212,32 +214,40 @@ export default function DronesPage() {
         return typeof hours === 'number' ? hours : '\u2014';
       },
     },
-    {
-      key: 'actions',
-      header: '',
-      render: (drone) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => openEditDialog(drone)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-400 focus:text-red-400"
-              onClick={() => handleDelete(drone)}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
+    ...(canEditDrone || canDeleteDrone
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            render: (drone: DroneRecord) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canEditDrone && (
+                    <DropdownMenuItem onClick={() => openEditDialog(drone)}>
+                      Edit
+                    </DropdownMenuItem>
+                  )}
+                  {canEditDrone && canDeleteDrone && <DropdownMenuSeparator />}
+                  {canDeleteDrone && (
+                    <DropdownMenuItem
+                      className="text-red-400 focus:text-red-400"
+                      onClick={() => handleDelete(drone)}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ),
+          } as Column<DroneRecord>,
+        ]
+      : []),
   ];
 
   // ---------------------------------------------------------------------------
@@ -250,7 +260,7 @@ export default function DronesPage() {
       <PageHeader
         title="Drones"
         description="Manage drone fleet"
-        action={{ label: 'Register Drone', onClick: openCreateDialog }}
+        action={canCreateDrone ? { label: 'Register Drone', onClick: openCreateDialog } : undefined}
       />
 
       <DataTable

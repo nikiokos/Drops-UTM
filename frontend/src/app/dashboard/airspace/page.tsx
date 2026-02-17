@@ -32,9 +32,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function AirspacePage() {
   const queryClient = useQueryClient();
+  const { canCreateAirspaceZone, canDeleteAirspaceZone } = usePermissions();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -89,30 +91,34 @@ export default function AirspacePage() {
     { key: 'altitudeCeiling', header: 'Ceiling (m)', render: (z) => `${z.altitudeCeiling ?? 0}m` },
     { key: 'status', header: 'Status', render: (z) => <StatusBadge status={z.status as string} /> },
     { key: 'priority', header: 'Priority' },
-    {
-      key: 'actions',
-      header: '',
-      render: (z) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => { if (confirm('Delete this zone?')) deleteMutation.mutate(z.id as string); }}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
+    ...(canDeleteAirspaceZone
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            render: (z: Record<string, unknown>) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => { if (confirm('Delete this zone?')) deleteMutation.mutate(z.id as string); }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ),
+          } as Column<Record<string, unknown>>,
+        ]
+      : []),
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Airspace" description="Manage airspace zones" action={{ label: 'Create Zone', onClick: () => setOpen(true) }} />
+      <PageHeader title="Airspace" description="Manage airspace zones" action={canCreateAirspaceZone ? { label: 'Create Zone', onClick: () => setOpen(true) } : undefined} />
       <DataTable columns={columns} data={zones} loading={isLoading} emptyMessage="No airspace zones defined" />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MoreHorizontal } from 'lucide-react';
 import { hubsApi } from '@/lib/api';
+import { usePermissions } from '@/hooks/use-permissions';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -46,6 +47,7 @@ const defaultFormState: Record<string, unknown> = {
 
 export default function HubsPage() {
   const queryClient = useQueryClient();
+  const { canCreateHub, canEditHub, canDeleteHub } = usePermissions();
   const [selectedHub, setSelectedHub] = useState<Record<string, unknown> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingHub, setEditingHub] = useState<Record<string, unknown> | null>(null);
@@ -180,39 +182,47 @@ export default function HubsPage() {
       header: 'Airspace Radius',
       render: (hub) => <span>{String(hub.airspaceRadius)}m</span>,
     },
-    {
-      key: 'actions',
-      header: '',
-      render: (hub) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                openEditDialog(hub);
-              }}
-            >
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-red-500"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(hub);
-              }}
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
+    ...(canEditHub || canDeleteHub
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            render: (hub: Record<string, unknown>) => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {canEditHub && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(hub);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                  )}
+                  {canEditHub && canDeleteHub && <DropdownMenuSeparator />}
+                  {canDeleteHub && (
+                    <DropdownMenuItem
+                      className="text-red-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(hub);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ),
+          } as Column<Record<string, unknown>>,
+        ]
+      : []),
   ];
 
   const markers: MarkerData[] = hubList
@@ -267,7 +277,7 @@ export default function HubsPage() {
       <PageHeader
         title="Hubs"
         description="Manage vertiport locations"
-        action={{ label: 'Add Hub', onClick: openCreateDialog }}
+        action={canCreateHub ? { label: 'Add Hub', onClick: openCreateDialog } : undefined}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

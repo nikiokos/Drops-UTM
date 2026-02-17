@@ -37,13 +37,19 @@ import { toast } from '@/hooks/use-toast';
 export default function FlightsPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Helper to get default departure time (1 hour from now) in datetime-local format
+  const getDefaultDeparture = () => {
+    const date = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+    return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+  };
+
   const [formData, setFormData] = useState({
     droneId: '',
     departureHubId: '',
     arrivalHubId: '',
     flightType: '',
     operationMode: '',
-    plannedDeparture: '',
+    plannedDeparture: getDefaultDeparture(),
   });
 
   // ---------------------------------------------------------------------------
@@ -190,20 +196,23 @@ export default function FlightsPage() {
       arrivalHubId: '',
       flightType: '',
       operationMode: '',
-      plannedDeparture: '',
+      plannedDeparture: getDefaultDeparture(),
     });
   }
 
   function handleCreate() {
+    // Use form value or fallback to 1 hour from now
+    const departure = formData.plannedDeparture
+      ? new Date(formData.plannedDeparture).toISOString()
+      : new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
     createMutation.mutate({
       droneId: formData.droneId,
       departureHubId: formData.departureHubId,
       arrivalHubId: formData.arrivalHubId,
       flightType: formData.flightType,
       operationMode: formData.operationMode,
-      plannedDeparture: formData.plannedDeparture
-        ? new Date(formData.plannedDeparture).toISOString()
-        : undefined,
+      plannedDeparture: departure,
     });
   }
 

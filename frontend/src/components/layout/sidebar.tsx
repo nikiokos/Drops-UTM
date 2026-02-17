@@ -24,12 +24,21 @@ import { useAuthStore } from '@/store/auth.store';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import type { LucideIcon } from 'lucide-react';
 
-const navigation: { name: string; href: string; icon: LucideIcon }[] = [
+type UserRole = 'admin' | 'hub_operator' | 'pilot';
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  roles?: UserRole[]; // If undefined, visible to all roles
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Control Center', href: '/dashboard/control', icon: Gamepad2 },
   { name: 'Emergency', href: '/dashboard/emergency', icon: ShieldAlert },
-  { name: 'Fleet', href: '/dashboard/fleet', icon: Network },
-  { name: 'Connectivity', href: '/dashboard/connectivity', icon: Wifi },
+  { name: 'Fleet', href: '/dashboard/fleet', icon: Network, roles: ['admin', 'hub_operator'] },
+  { name: 'Connectivity', href: '/dashboard/connectivity', icon: Wifi, roles: ['admin', 'hub_operator'] },
   { name: 'Missions', href: '/dashboard/missions', icon: Route },
   { name: 'Flights', href: '/dashboard/flights', icon: Plane },
   { name: 'Drones', href: '/dashboard/drones', icon: Bot },
@@ -37,7 +46,7 @@ const navigation: { name: string; href: string; icon: LucideIcon }[] = [
   { name: 'Airspace', href: '/dashboard/airspace', icon: Map },
   { name: 'Conflicts', href: '/dashboard/conflicts', icon: AlertTriangle },
   { name: 'Weather', href: '/dashboard/weather', icon: Cloud },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['admin'] },
 ];
 
 export function Sidebar() {
@@ -69,33 +78,41 @@ export function Sidebar() {
         <p className="px-3 mb-3 text-sm font-semibold tracking-[0.15em] text-muted-foreground/60 uppercase">
           Operations
         </p>
-        {navigation.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== '/dashboard' && pathname.startsWith(item.href));
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'group flex items-center gap-3 rounded px-3 py-2 text-base font-medium transition-all duration-150',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-              )}
-            >
-              {isActive && (
-                <div className="absolute left-0 w-0.5 h-5 bg-primary rounded-r" />
-              )}
-              <Icon className={cn(
-                'h-5 w-5 transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground/70 group-hover:text-foreground/70',
-              )} />
-              {item.name}
-            </Link>
-          );
-        })}
+        {navigation
+          .filter((item) => {
+            // If no roles specified, visible to all
+            if (!item.roles) return true;
+            // Check if user's role is in the allowed roles
+            const userRole = user?.role as UserRole | undefined;
+            return userRole && item.roles.includes(userRole);
+          })
+          .map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'group flex items-center gap-3 rounded px-3 py-2 text-base font-medium transition-all duration-150',
+                  isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                )}
+              >
+                {isActive && (
+                  <div className="absolute left-0 w-0.5 h-5 bg-primary rounded-r" />
+                )}
+                <Icon className={cn(
+                  'h-5 w-5 transition-colors',
+                  isActive ? 'text-primary' : 'text-muted-foreground/70 group-hover:text-foreground/70',
+                )} />
+                {item.name}
+              </Link>
+            );
+          })}
       </nav>
 
       {/* Theme toggle */}
