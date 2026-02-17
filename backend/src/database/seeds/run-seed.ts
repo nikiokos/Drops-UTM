@@ -24,16 +24,16 @@ async function runSeed() {
 
   // ── Clear existing data ──
   logger.log('Clearing existing data...');
-  await dataSource.getRepository(BlackboxEntry).delete({});
-  await dataSource.getRepository(EmergencyIncident).delete({});
-  await dataSource.getRepository(EmergencyProtocol).delete({});
-  await dataSource.getRepository(Conflict).delete({});
-  await dataSource.getRepository(AirspaceZone).delete({});
-  await dataSource.getRepository(Flight).delete({});
-  await dataSource.getRepository(Drone).delete({});
-  await dataSource.getRepository(Hub).delete({});
-  await dataSource.getRepository(User).delete({});
-  await dataSource.getRepository(Organization).delete({});
+  await dataSource.getRepository(BlackboxEntry).clear();
+  await dataSource.getRepository(EmergencyIncident).clear();
+  await dataSource.getRepository(EmergencyProtocol).clear();
+  await dataSource.getRepository(Conflict).clear();
+  await dataSource.getRepository(AirspaceZone).clear();
+  await dataSource.getRepository(Flight).clear();
+  await dataSource.getRepository(Drone).clear();
+  await dataSource.getRepository(Hub).clear();
+  await dataSource.getRepository(User).clear();
+  await dataSource.getRepository(Organization).clear();
   logger.log('Existing data cleared');
 
   // ── Organization ──
