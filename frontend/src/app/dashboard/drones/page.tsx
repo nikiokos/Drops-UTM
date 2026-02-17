@@ -69,9 +69,11 @@ export default function DronesPage() {
     queryFn: () => dronesApi.getAll(),
   });
 
+  // Hubs only needed for the create/edit dialog selectors
   const { data: hubsData } = useQuery({
     queryKey: ['hubs'],
     queryFn: () => hubsApi.getAll(),
+    enabled: dialogOpen,
   });
 
   const drones: DroneRecord[] = (() => {
@@ -83,10 +85,6 @@ export default function DronesPage() {
     const h = hubsData?.data;
     return Array.isArray(h) ? h : (h as Record<string, unknown>)?.data as HubRecord[] || [];
   })();
-
-  const hubMap = new Map<string, HubRecord>(
-    hubs.map((hub) => [hub.id as string, hub]),
-  );
 
   // ---------------------------------------------------------------------------
   // Mutations
@@ -195,7 +193,7 @@ export default function DronesPage() {
       key: 'homeHubId',
       header: 'Home Hub',
       render: (drone) => {
-        const hub = hubMap.get(drone.homeHubId as string);
+        const hub = drone.homeHub as HubRecord | undefined;
         if (!hub) return '\u2014';
         return `${hub.name as string} (${hub.code as string})`;
       },

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { flightsApi, dronesApi, hubsApi } from '@/lib/api';
-import { cn, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -61,14 +61,17 @@ export default function FlightsPage() {
     queryFn: () => flightsApi.getAll(),
   });
 
+  // Drones & hubs only needed for the create dialog selectors
   const { data: dronesResponse } = useQuery({
     queryKey: ['drones'],
     queryFn: () => dronesApi.getAll(),
+    enabled: dialogOpen,
   });
 
   const { data: hubsResponse } = useQuery({
     queryKey: ['hubs'],
     queryFn: () => hubsApi.getAll(),
+    enabled: dialogOpen,
   });
 
   // Normalize API responses
@@ -92,17 +95,6 @@ export default function FlightsPage() {
     : (hubsRaw as Record<string, unknown>)?.data
       ? ((hubsRaw as Record<string, unknown>).data as Record<string, unknown>[])
       : [];
-
-  // Build lookup maps
-  const droneMap = new Map<string, Record<string, unknown>>();
-  drones.forEach((d) => {
-    droneMap.set(d.id as string, d);
-  });
-
-  const hubMap = new Map<string, Record<string, unknown>>();
-  hubs.forEach((h) => {
-    hubMap.set(h.id as string, h);
-  });
 
   // ---------------------------------------------------------------------------
   // Mutations
@@ -230,24 +222,24 @@ export default function FlightsPage() {
       key: 'droneId',
       header: 'Drone',
       render: (row) => {
-        const drone = droneMap.get(row.droneId as string);
-        return drone ? (drone.registrationNumber as string) : '-';
+        const drone = row.drone as Record<string, unknown> | undefined;
+        return drone?.registrationNumber ? (drone.registrationNumber as string) : '-';
       },
     },
     {
       key: 'departureHubId',
       header: 'Departure Hub',
       render: (row) => {
-        const hub = hubMap.get(row.departureHubId as string);
-        return hub ? `${hub.name}` : '-';
+        const hub = row.departureHub as Record<string, unknown> | undefined;
+        return hub?.name ? `${hub.name}` : '-';
       },
     },
     {
       key: 'arrivalHubId',
       header: 'Arrival Hub',
       render: (row) => {
-        const hub = hubMap.get(row.arrivalHubId as string);
-        return hub ? `${hub.name}` : '-';
+        const hub = row.arrivalHub as Record<string, unknown> | undefined;
+        return hub?.name ? `${hub.name}` : '-';
       },
     },
     {

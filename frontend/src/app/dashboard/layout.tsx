@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuthStore } from '@/store/auth.store';
 import { Toaster } from '@/components/ui/toaster';
 import { EmergencyBanner } from '@/components/emergency/emergency-banner';
 import { EmergencyConfirmationModal } from '@/components/emergency/confirmation-modal';
 import { useEmergencyStore } from '@/store/emergency.store';
+import { hubsApi, dronesApi, flightsApi } from '@/lib/api';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const pendingConfirmations = useEmergencyStore((s) => s.pendingConfirmations);
@@ -20,6 +23,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.push('/login');
     }
   }, [isAuthenticated, router]);
+
+  // Prefetch commonly used data on dashboard load
+  useEffect(() => {
+    if (isAuthenticated) {
+      queryClient.prefetchQuery({ queryKey: ['hubs'], queryFn: () => hubsApi.getAll() });
+      queryClient.prefetchQuery({ queryKey: ['drones'], queryFn: () => dronesApi.getAll() });
+      queryClient.prefetchQuery({ queryKey: ['flights'], queryFn: () => flightsApi.getAll() });
+    }
+  }, [isAuthenticated, queryClient]);
 
   // Auto-open confirmation modal when there are pending confirmations
   useEffect(() => {
