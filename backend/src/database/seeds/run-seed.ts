@@ -12,6 +12,7 @@ import { Flight } from '../../modules/flights/flight.entity';
 import { AirspaceZone } from '../../modules/airspace/airspace-zone.entity';
 import { Conflict } from '../../modules/conflicts/conflict.entity';
 import { EmergencyIncident, EmergencyType, EmergencySeverity, IncidentStatus, ResponseAction, RootCause } from '../../modules/emergency/incident.entity';
+import { DeviceRegistration } from '../../modules/connectivity/entities/device-registration.entity';
 import { EmergencyProtocol } from '../../modules/emergency/protocol.entity';
 import { BlackboxEntry } from '../../modules/emergency/blackbox.entity';
 
@@ -308,6 +309,47 @@ async function runSeed() {
       logger.log(`Created drone: ${d.registrationNumber} — ${d.manufacturer} ${d.model}`);
     }
     drones.push(drone);
+  }
+
+  // ── Device Registrations ──
+  const deviceRepo = dataSource.getRepository(DeviceRegistration);
+  const protocolMap: Record<string, string[]> = {
+    dji_sdk: ['websocket', 'dji_sdk'],
+    mavlink: ['websocket', 'mavlink'],
+    custom_api: ['websocket', 'rest'],
+  };
+  // Register each drone as a device — simulate some as active/online
+  for (let i = 0; i < drones.length; i++) {
+    const drone = drones[i];
+    const droneData = dronesData[i];
+    const isOnline = drone.status === 'in_flight' || drone.status === 'available';
+    const reg = deviceRepo.create({
+      deviceType: 'drone' as const,
+      droneId: drone.id,
+      deviceIdentifier: `DEV-${droneData.registrationNumber}`,
+      registrationStatus: 'active' as const,
+      connectionStatus: isOnline ? 'online' as const : 'offline' as const,
+      supportedProtocols: protocolMap[droneData.communicationProtocol] || ['websocket'],
+      lastSeenAt: isOnline ? new Date() : new Date(Date.now() - 3600_000 * (i + 1)),
+      metadata: { manufacturer: droneData.manufacturer, model: droneData.model },
+    });
+    await deviceRepo.save(reg);
+    logger.log(`Registered device: DEV-${droneData.registrationNumber} [${isOnline ? 'online' : 'offline'}]`);
+  }
+  // Register hub gateways
+  for (const hub of hubs) {
+    const reg = deviceRepo.create({
+      deviceType: 'gateway' as const,
+      hubId: hub.id,
+      deviceIdentifier: `GW-${hub.code}`,
+      registrationStatus: 'active' as const,
+      connectionStatus: 'online' as const,
+      supportedProtocols: ['websocket'],
+      lastSeenAt: new Date(),
+      metadata: { hubName: hub.name },
+    });
+    await deviceRepo.save(reg);
+    logger.log(`Registered gateway: GW-${hub.code}`);
   }
 
   // ── Flights ──
@@ -1069,6 +1111,7 @@ async function runSeed() {
   logger.log(`  Users: ${usersData.length}`);
   logger.log(`  Hubs: ${hubsData.length}`);
   logger.log(`  Drones: ${dronesData.length}`);
+  logger.log(`  Device Registrations: ${drones.length + hubs.length}`);
   logger.log(`  Flights: ${flightsData.length}`);
   logger.log(`  Airspace Zones: ${zonesData.length}`);
   logger.log(`  Conflicts: ${conflictsData.length}`);
