@@ -353,7 +353,7 @@ export default function DashboardPage() {
                     ] as [number, number]
                   : hubMarkers[0]?.position
               }
-              zoom={hubMarkers.length > 1 ? 3 : 6}
+              zoom={hubMarkers.length > 1 ? 6 : 10}
               className="h-[380px] rounded overflow-hidden"
             />
           ) : (

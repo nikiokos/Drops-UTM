@@ -264,9 +264,9 @@ export default function HubsPage() {
   const mapCenter: [number, number] = selectedHub
     ? (() => {
         const loc = selectedHub.location as Record<string, unknown> | undefined;
-        return loc ? [Number(loc.latitude), Number(loc.longitude)] as [number, number] : [37.5665, 126.978] as [number, number];
+        return loc ? [Number(loc.latitude), Number(loc.longitude)] as [number, number] : [38.5, 23.8] as [number, number];
       })()
-    : [37.5665, 126.978];
+    : [38.5, 23.8];
 
   const mapZoom = selectedHub ? 14 : 6;
 
@@ -351,7 +351,7 @@ export default function HubsPage() {
                   id="latitude"
                   type="number"
                   step="any"
-                  placeholder="37.5665"
+                  placeholder="37.9838"
                   value={String(formData.latitude ?? '')}
                   onChange={(e) => updateField('latitude', e.target.value)}
                 />
@@ -365,7 +365,7 @@ export default function HubsPage() {
                   id="longitude"
                   type="number"
                   step="any"
-                  placeholder="126.978"
+                  placeholder="23.7275"
                   value={String(formData.longitude ?? '')}
                   onChange={(e) => updateField('longitude', e.target.value)}
                 />

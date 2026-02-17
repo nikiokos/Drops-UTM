@@ -22,6 +22,20 @@ async function runSeed() {
 
   logger.log('Seeding started...');
 
+  // ── Clear existing data ──
+  logger.log('Clearing existing data...');
+  await dataSource.getRepository(BlackboxEntry).delete({});
+  await dataSource.getRepository(EmergencyIncident).delete({});
+  await dataSource.getRepository(EmergencyProtocol).delete({});
+  await dataSource.getRepository(Conflict).delete({});
+  await dataSource.getRepository(AirspaceZone).delete({});
+  await dataSource.getRepository(Flight).delete({});
+  await dataSource.getRepository(Drone).delete({});
+  await dataSource.getRepository(Hub).delete({});
+  await dataSource.getRepository(User).delete({});
+  await dataSource.getRepository(Organization).delete({});
+  logger.log('Existing data cleared');
+
   // ── Organization ──
   const orgRepo = dataSource.getRepository(Organization);
   let org = await orgRepo.findOne({ where: { name: 'DROPS Aerospace' } });
