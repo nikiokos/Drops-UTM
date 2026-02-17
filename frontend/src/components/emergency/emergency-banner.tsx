@@ -59,7 +59,10 @@ export function EmergencyBanner() {
   });
 
   const topIncident = sortedIncidents[0];
-  const pendingCount = pendingConfirmations.length;
+  const visiblePending = pendingConfirmations.filter(
+    (p) => !dismissed.has(p.incidentId),
+  );
+  const pendingCount = visiblePending.length;
 
   if (!topIncident && pendingCount === 0) {
     return null;
@@ -67,7 +70,7 @@ export function EmergencyBanner() {
 
   // Show pending confirmation banner if any
   if (pendingCount > 0) {
-    const pending = pendingConfirmations[0];
+    const pending = visiblePending[0];
     const config = SEVERITY_CONFIG[pending.incident?.severity] || SEVERITY_CONFIG.warning;
     const Icon = config.icon;
     const timeoutAt = new Date(pending.timeoutAt);
@@ -92,15 +95,33 @@ export function EmergencyBanner() {
             )}
           </div>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => router.push('/dashboard/emergency')}
-          className={`${config.text} border-current hover:bg-white/10`}
-        >
-          Respond Now
-          <ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => router.push(`/dashboard/emergency/incidents/${pending.incidentId}`)}
+            className="text-foreground"
+          >
+            View Details
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => router.push('/dashboard/emergency')}
+            className={`${config.text} border-current hover:bg-white/10`}
+          >
+            Respond Now
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDismissed(new Set([...dismissed, pending.incidentId]))}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   }
