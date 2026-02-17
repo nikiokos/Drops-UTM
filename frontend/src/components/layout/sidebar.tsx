@@ -18,6 +18,7 @@ import {
   Network,
   ShieldAlert,
   Wifi,
+  Code,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
@@ -46,6 +47,7 @@ const navigation: NavItem[] = [
   { name: 'Airspace', href: '/dashboard/airspace', icon: Map },
   { name: 'Conflicts', href: '/dashboard/conflicts', icon: AlertTriangle },
   { name: 'Weather', href: '/dashboard/weather', icon: Cloud },
+  { name: 'Developer', href: '/dashboard/developer', icon: Code, roles: ['admin'] },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings, roles: ['admin'] },
 ];
 

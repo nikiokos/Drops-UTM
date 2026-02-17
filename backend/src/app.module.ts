@@ -29,6 +29,7 @@ import { EmergencyModule } from './modules/emergency/emergency.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ConnectivityModule } from './modules/connectivity/connectivity.module';
 import { SimulationModule } from './modules/simulation/simulation.module';
+import { IntegrationModule } from './modules/integration/integration.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { SimulationModule } from './modules/simulation/simulation.module';
     NotificationsModule,
     ConnectivityModule,
     SimulationModule,
+    IntegrationModule,
   ],
   providers: [
     // Global JWT authentication guard - requires auth for all routes except @Public()

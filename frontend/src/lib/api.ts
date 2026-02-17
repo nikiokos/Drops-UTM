@@ -706,6 +706,45 @@ export interface RegisterDeviceDto {
 
 // ============ Connectivity API ============
 
+// ============ Integration / API Key Types ============
+
+export interface ApiKeyInfo {
+  id: string;
+  keyPrefix: string;
+  name: string;
+  manufacturerName: string;
+  contactEmail: string;
+  permissions: string[];
+  rateLimit: number;
+  isActive: boolean;
+  totalRequests: number;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+  manufacturerName: string;
+  contactEmail: string;
+  permissions?: string[];
+  rateLimit?: number;
+  expiresAt?: string;
+}
+
+export interface CreateApiKeyResponse {
+  apiKey: string;
+  keyInfo: ApiKeyInfo;
+}
+
+export const integrationApi = {
+  // Admin key management (JWT auth)
+  createKey: (data: CreateApiKeyRequest) =>
+    api.post<CreateApiKeyResponse>('/integration/keys', data),
+  listKeys: () => api.get<ApiKeyInfo[]>('/integration/keys'),
+  revokeKey: (id: string) => api.post(`/integration/keys/${id}/revoke`),
+};
+
 export const connectivityApi = {
   // Status
   getStatus: () => api.get<ConnectivityStatus>('/connectivity/status'),

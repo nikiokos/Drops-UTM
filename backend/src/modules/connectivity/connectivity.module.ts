@@ -42,6 +42,7 @@ import { DroneCommand } from '../commands/command.entity';
     DeviceRegistryService,
     CertificateService,
     ProtocolGatewayService,
+    MessageNormalizerService,
     AdaptiveRateService,
     CommandRouterService,
     WebSocketAdapter,

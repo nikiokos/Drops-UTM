@@ -32,6 +32,9 @@ interface Permissions {
   canManageDeviceCertificates: boolean;
   canRegisterDevices: boolean;
 
+  // Integration / API Keys
+  canManageApiKeys: boolean;
+
   // Settings
   canAccessSettings: boolean;
 
@@ -78,6 +81,9 @@ export function usePermissions(): Permissions {
     // Connectivity
     canManageDeviceCertificates: isAdmin,
     canRegisterDevices: isAdmin || isHubOperator,
+
+    // Integration / API Keys
+    canManageApiKeys: isAdmin,
 
     // Settings - admin only for system settings
     canAccessSettings: isAdmin,
