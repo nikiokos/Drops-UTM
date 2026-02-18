@@ -56,46 +56,37 @@ export default function FlightsPage() {
   // Queries
   // ---------------------------------------------------------------------------
 
-  const { data: flightsResponse, isLoading: flightsLoading } = useQuery({
+  const { data: flightsData, isLoading: flightsLoading } = useQuery({
     queryKey: ['flights'],
-    queryFn: () => flightsApi.getAll(),
+    queryFn: () => flightsApi.getAll().then((r) => r.data),
     placeholderData: keepPreviousData,
   });
 
   // Drones & hubs only needed for the create dialog selectors
-  const { data: dronesResponse } = useQuery({
+  const { data: dronesData } = useQuery({
     queryKey: ['drones'],
-    queryFn: () => dronesApi.getAll(),
+    queryFn: () => dronesApi.getAll().then((r) => r.data),
     enabled: dialogOpen,
   });
 
-  const { data: hubsResponse } = useQuery({
+  const { data: hubsData } = useQuery({
     queryKey: ['hubs'],
-    queryFn: () => hubsApi.getAll(),
+    queryFn: () => hubsApi.getAll().then((r) => r.data),
     enabled: dialogOpen,
   });
 
-  // Normalize API responses
-  const flightsRaw = flightsResponse?.data;
-  const flights: Record<string, unknown>[] = Array.isArray(flightsRaw)
-    ? flightsRaw
-    : (flightsRaw as Record<string, unknown>)?.data
-      ? ((flightsRaw as Record<string, unknown>).data as Record<string, unknown>[])
-      : [];
+  // Normalize API responses (handle both array and { data: [...] } formats)
+  function extractArray(raw: unknown): Record<string, unknown>[] {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
+      return (raw as Record<string, unknown>).data as Record<string, unknown>[];
+    }
+    return [];
+  }
 
-  const dronesRaw = dronesResponse?.data;
-  const drones: Record<string, unknown>[] = Array.isArray(dronesRaw)
-    ? dronesRaw
-    : (dronesRaw as Record<string, unknown>)?.data
-      ? ((dronesRaw as Record<string, unknown>).data as Record<string, unknown>[])
-      : [];
-
-  const hubsRaw = hubsResponse?.data;
-  const hubs: Record<string, unknown>[] = Array.isArray(hubsRaw)
-    ? hubsRaw
-    : (hubsRaw as Record<string, unknown>)?.data
-      ? ((hubsRaw as Record<string, unknown>).data as Record<string, unknown>[])
-      : [];
+  const flights = extractArray(flightsData);
+  const drones = extractArray(dronesData);
+  const hubs = extractArray(hubsData);
 
   // ---------------------------------------------------------------------------
   // Mutations

@@ -64,28 +64,29 @@ export default function DronesPage() {
   // ---------------------------------------------------------------------------
   // Queries
   // ---------------------------------------------------------------------------
-  const { data: dronesData, isLoading: dronesLoading } = useQuery({
+  const { data: dronesRaw, isLoading: dronesLoading } = useQuery({
     queryKey: ['drones'],
-    queryFn: () => dronesApi.getAll(),
+    queryFn: () => dronesApi.getAll().then((r) => r.data),
     placeholderData: keepPreviousData,
   });
 
   // Hubs only needed for the create/edit dialog selectors
-  const { data: hubsData } = useQuery({
+  const { data: hubsRaw } = useQuery({
     queryKey: ['hubs'],
-    queryFn: () => hubsApi.getAll(),
+    queryFn: () => hubsApi.getAll().then((r) => r.data),
     enabled: dialogOpen,
   });
 
-  const drones: DroneRecord[] = (() => {
-    const d = dronesData?.data;
-    return Array.isArray(d) ? d : (d as Record<string, unknown>)?.data as DroneRecord[] || [];
-  })();
+  function extractArray(raw: unknown): Record<string, unknown>[] {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
+      return (raw as Record<string, unknown>).data as Record<string, unknown>[];
+    }
+    return [];
+  }
 
-  const hubs: HubRecord[] = (() => {
-    const h = hubsData?.data;
-    return Array.isArray(h) ? h : (h as Record<string, unknown>)?.data as HubRecord[] || [];
-  })();
+  const drones: DroneRecord[] = extractArray(dronesRaw);
+  const hubs: HubRecord[] = extractArray(hubsRaw);
 
   // ---------------------------------------------------------------------------
   // Mutations
