@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { airspaceApi, hubsApi } from '@/lib/api';
 import { ZoneType, ZoneStatus } from '@drops-utm/shared';
 import { PageHeader } from '@/components/shared/page-header';
@@ -50,6 +50,7 @@ export default function AirspacePage() {
   const { data: zonesData, isLoading } = useQuery({
     queryKey: ['zones'],
     queryFn: () => airspaceApi.getZones().then((r) => r.data),
+    placeholderData: keepPreviousData,
   });
 
   const { data: hubsData } = useQuery({

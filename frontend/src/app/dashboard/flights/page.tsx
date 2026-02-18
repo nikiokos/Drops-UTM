@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { flightsApi, dronesApi, hubsApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/page-header';
@@ -59,6 +59,7 @@ export default function FlightsPage() {
   const { data: flightsResponse, isLoading: flightsLoading } = useQuery({
     queryKey: ['flights'],
     queryFn: () => flightsApi.getAll(),
+    placeholderData: keepPreviousData,
   });
 
   // Drones & hubs only needed for the create dialog selectors

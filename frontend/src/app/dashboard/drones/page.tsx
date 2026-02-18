@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { MoreHorizontal } from 'lucide-react';
 import { CommunicationProtocol } from '@drops-utm/shared';
 import { dronesApi, hubsApi } from '@/lib/api';
@@ -67,6 +67,7 @@ export default function DronesPage() {
   const { data: dronesData, isLoading: dronesLoading } = useQuery({
     queryKey: ['drones'],
     queryFn: () => dronesApi.getAll(),
+    placeholderData: keepPreviousData,
   });
 
   // Hubs only needed for the create/edit dialog selectors

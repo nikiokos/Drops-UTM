@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Sidebar } from '@/components/layout/sidebar';
 import { useAuthStore } from '@/store/auth.store';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,7 +13,6 @@ import { hubsApi, dronesApi, flightsApi } from '@/lib/api';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const pendingConfirmations = useEmergencyStore((s) => s.pendingConfirmations);
@@ -24,14 +23,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isAuthenticated, router]);
 
-  // Prefetch commonly used data on dashboard load
-  useEffect(() => {
-    if (isAuthenticated) {
-      queryClient.prefetchQuery({ queryKey: ['hubs'], queryFn: () => hubsApi.getAll() });
-      queryClient.prefetchQuery({ queryKey: ['drones'], queryFn: () => dronesApi.getAll() });
-      queryClient.prefetchQuery({ queryKey: ['flights'], queryFn: () => flightsApi.getAll() });
-    }
-  }, [isAuthenticated, queryClient]);
+  // Pre-warm cache during render (fires immediately, not after paint like useEffect)
+  // Data is not used here — just warming the cache for child pages
+  useQuery({ queryKey: ['hubs'], queryFn: () => hubsApi.getAll(), enabled: isAuthenticated, notifyOnChangeProps: [] });
+  useQuery({ queryKey: ['drones'], queryFn: () => dronesApi.getAll(), enabled: isAuthenticated, notifyOnChangeProps: [] });
+  useQuery({ queryKey: ['flights'], queryFn: () => flightsApi.getAll(), enabled: isAuthenticated, notifyOnChangeProps: [] });
 
   // Auto-open confirmation modal when there are pending confirmations
   useEffect(() => {

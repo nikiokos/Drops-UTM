@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { MoreHorizontal } from 'lucide-react';
 import { hubsApi } from '@/lib/api';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -56,6 +56,7 @@ export default function HubsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['hubs'],
     queryFn: () => hubsApi.getAll().then((r) => r.data),
+    placeholderData: keepPreviousData,
   });
 
   const hubList: Record<string, unknown>[] = Array.isArray(data) ? data : (data as unknown as Record<string, unknown>)?.data as Record<string, unknown>[] || [];
