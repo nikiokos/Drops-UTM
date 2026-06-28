@@ -860,6 +860,40 @@ export const adsbApi = {
     }>('/adsb/aircraft'),
 };
 
+// ── Live NOTAMs (autorouter) ──
+export interface Notam {
+  id: number;
+  ref: string;
+  fir: string;
+  itemA: string[];
+  qcode: string;
+  subject: string;
+  significance: 'critical' | 'warning' | 'info';
+  scope: string;
+  text: string;
+  schedule: string | null;
+  lowerFt: number | null;
+  upperFt: number | null;
+  center: { lat: number; lon: number } | null;
+  radiusNm: number | null;
+  start: string;
+  end: string | null;
+  permanent: boolean;
+  estimated: boolean;
+}
+
+export const notamApi = {
+  getNotams: (icaos?: string) =>
+    api.get<{
+      count: number;
+      enabled: boolean;
+      icaos: string[];
+      updatedAt: string;
+      source: string;
+      notams: Notam[];
+    }>('/notam', { params: icaos ? { icaos } : undefined }),
+};
+
 export interface DagrConfig {
   wmsUrl: string;
   version: string;
@@ -933,9 +967,28 @@ export interface BriefingResult {
       warningCount?: number;
       nearest?: { callsign: string | null; hex: string; distanceNm: number; altFt: number | null } | null;
     };
-    notam: { status: string; message: string };
+    notam: {
+      status: string;
+      message?: string;
+      total?: number;
+      relevantCount?: number;
+      criticalCount?: number;
+      warningCount?: number;
+      items?: BriefingNotamItem[];
+    };
   };
   generatedAt: string;
+}
+
+export interface BriefingNotamItem {
+  ref: string;
+  subject: string;
+  significance: 'critical' | 'warning' | 'info';
+  scope: string;
+  text: string;
+  schedule: string | null;
+  end: string | null;
+  permanent: boolean;
 }
 
 export const briefingApi = {

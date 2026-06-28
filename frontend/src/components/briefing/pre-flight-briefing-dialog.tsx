@@ -136,7 +136,31 @@ export function PreFlightBriefingDialog({
 
             {/* NOTAM */}
             <Section icon={<FileText className="h-4 w-4" />} title="NOTAM">
-              <span className="text-muted-foreground">{data.sections.notam.message}</span>
+              {data.sections.notam.status === 'ok' ? (
+                (data.sections.notam.relevantCount ?? 0) === 0 ? (
+                  <span className="text-emerald-400">No active NOTAMs affecting this route</span>
+                ) : (
+                  <div className="space-y-1">
+                    <span className={data.sections.notam.criticalCount ? 'text-red-400' : 'text-amber-400'}>
+                      {data.sections.notam.relevantCount} active NOTAM(s) on route
+                      {data.sections.notam.criticalCount
+                        ? ` · ${data.sections.notam.criticalCount} restricted/danger`
+                        : ''}
+                    </span>
+                    <ul className="space-y-1">
+                      {(data.sections.notam.items || []).slice(0, 5).map((n) => (
+                        <li key={n.ref} className="text-[11px] leading-tight">
+                          <span className={`font-mono font-semibold ${sevColor[n.significance]}`}>{n.ref}</span>{' '}
+                          <span className="text-muted-foreground">{n.subject}</span>
+                          {n.permanent ? <span className="text-muted-foreground"> · PERM</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              ) : (
+                <span className="text-muted-foreground">{data.sections.notam.message || 'unavailable'}</span>
+              )}
             </Section>
 
             {/* AI Authorization Agent (Claude) */}

@@ -36,6 +36,11 @@ export default () => ({
     // Claude API key for the AI authorization agent. Server-side only.
     apiKey: process.env.ANTHROPIC_API_KEY || '',
   },
+  autorouter: {
+    // NOTAM feed (OAuth2 client_credentials = autorouter account email + password).
+    clientId: process.env.AUTOROUTER_CLIENT_ID || '',
+    clientSecret: process.env.AUTOROUTER_CLIENT_SECRET || '',
+  },
   mqtt: {
     brokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
     username: process.env.MQTT_USERNAME || '',

@@ -34,6 +34,7 @@ import { AdsbModule } from './modules/adsb/adsb.module';
 import { DagrModule } from './modules/dagr/dagr.module';
 import { OpenaipModule } from './modules/openaip/openaip.module';
 import { BriefingModule } from './modules/briefing/briefing.module';
+import { NotamModule } from './modules/notam/notam.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { BriefingModule } from './modules/briefing/briefing.module';
     DagrModule,
     OpenaipModule,
     BriefingModule,
+    NotamModule,
   ],
   providers: [
     // Global JWT authentication guard - requires auth for all routes except @Public()

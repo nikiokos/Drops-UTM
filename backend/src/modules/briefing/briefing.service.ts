@@ -4,6 +4,7 @@ import { WeatherService } from '../weather/weather.service';
 import { AirspaceService } from '../airspace/airspace.service';
 import { AdsbService } from '../adsb/adsb.service';
 import { ClaudeService } from '../ai/claude.service';
+import { NotamService } from '../notam/notam.service';
 
 type Verdict = 'GREEN' | 'AMBER' | 'RED';
 
@@ -34,6 +35,7 @@ export class BriefingService {
     private readonly airspaceService: AirspaceService,
     private readonly adsbService: AdsbService,
     private readonly claudeService: ClaudeService,
+    private readonly notamService: NotamService,
   ) {}
 
   /**
@@ -55,7 +57,7 @@ export class BriefingService {
       `WEATHER: ${wx.status === 'ok' ? `${wx.verdict} at ${wx.icao} (${wx.flightCategory}), wind ${wx.windMs} m/s. ${(wx.reasons as string[] | undefined)?.join('; ')}` : 'unavailable'}`,
       `AIRSPACE: ${air.status === 'ok' ? `${air.breachCount} zone(s) intersected (worst: ${air.worstSeverity}). ${(air.breaches as Array<{ name: string; zoneType: string; severity: string }> | undefined)?.map((b) => `${b.name} [${b.severity} ${b.zoneType}]`).join('; ')}` : 'unavailable'}`,
       `LIVE TRAFFIC (ADS-B): ${traffic.status === 'ok' ? `${traffic.nearbyCount} manned aircraft near route (${traffic.warningCount} within 1.5NM, ${traffic.cautionCount} within 3NM)${(traffic.nearest as { callsign?: string; distanceNm?: number } | null) ? `, nearest ${(traffic.nearest as { callsign?: string }).callsign} @ ${(traffic.nearest as { distanceNm?: number }).distanceNm} NM` : ''}` : 'unavailable'}`,
-      `NOTAM: ${briefing.sections.notam.message}`,
+      `NOTAM: ${this.notamEvidence(briefing.sections.notam as Record<string, unknown>)}`,
     ].join('\n');
 
     const system =
@@ -101,6 +103,17 @@ export class BriefingService {
     };
   }
 
+  private notamEvidence(notam: Record<string, unknown>): string {
+    if (notam.status !== 'ok') return String(notam.message ?? 'unavailable');
+    const items = (notam.items as Array<{ ref: string; subject: string; significance: string }>) || [];
+    const head = `${notam.relevantCount} active on route (${notam.criticalCount} restricted/danger, ${notam.warningCount} hazard/obstacle)`;
+    const list = items
+      .slice(0, 5)
+      .map((i) => `${i.ref} [${i.significance}] ${i.subject}`)
+      .join('; ');
+    return list ? `${head}. ${list}` : head;
+  }
+
   async getFlightBriefing(flightId: string) {
     const flight = await this.flightsService.findById(flightId);
     const dep = flight.departureHub?.location;
@@ -111,12 +124,13 @@ export class BriefingService {
     if (dep?.latitude != null) routePoints.push({ lat: dep.latitude, lon: dep.longitude, alt });
     if (arr?.latitude != null) routePoints.push({ lat: arr.latitude, lon: arr.longitude, alt });
 
-    const [weatherR, airspaceR, trafficR] = await Promise.allSettled([
+    const [weatherR, airspaceR, trafficR, notamR] = await Promise.allSettled([
       this.weatherService.getGoNoGo(flight.departureHubId),
       routePoints.length >= 1
         ? this.airspaceService.checkPath(routePoints)
         : Promise.resolve(null),
       this.computeTraffic(routePoints),
+      this.computeNotam(routePoints, alt),
     ]);
 
     let verdict: Verdict = 'GREEN';
@@ -173,11 +187,20 @@ export class BriefingService {
       traffic = { status: 'unavailable' };
     }
 
-    // ── NOTAM section (pending autorouter integration) ──
-    const notam = {
-      status: 'pending',
-      message: 'NOTAM feed pending (autorouter API approval)',
-    };
+    // ── NOTAM section (live autorouter feed) ──
+    let notam: Record<string, unknown>;
+    if (notamR.status === 'fulfilled' && notamR.value) {
+      const n = notamR.value;
+      notam = { status: 'ok', ...n };
+      if (n.criticalCount > 0) raise('AMBER');
+    } else {
+      notam = {
+        status: 'unavailable',
+        message: this.notamService.hasCredentials()
+          ? 'NOTAM feed unavailable'
+          : 'NOTAM feed not configured',
+      };
+    }
 
     return {
       flightId,
@@ -218,5 +241,53 @@ export class BriefingService {
       }
     }
     return { nearbyCount: cautionCount + warningCount, cautionCount, warningCount, nearest };
+  }
+
+  /**
+   * Live NOTAMs for the Athinai FIR, narrowed to those relevant to this route:
+   * within the NOTAM's own radius (+buffer) of a waypoint (or FIR-wide), and
+   * reaching the drone's operating band. Advisory — geofence owns hard zone gates.
+   */
+  private async computeNotam(routePoints: { lat: number; lon: number; alt: number }[], altM: number) {
+    const notams = await this.notamService.getNotams([NotamService.GREEK_FIR]);
+    const ceilingFt = altM * 3.28084 + 500; // drone operating band + buffer
+    const BUFFER_NM = 3;
+
+    const relevant = notams.filter((n) => {
+      // Altitude band: skip NOTAMs whose lower limit is above the drone band.
+      if (n.lowerFt != null && n.lowerFt > ceilingFt) return false;
+      // Geography: FIR-wide / no geometry → relevant; else within radius+buffer.
+      if (!n.center || n.radiusNm == null) return true;
+      if (routePoints.length === 0) return true;
+      const reach = n.radiusNm + BUFFER_NM;
+      return routePoints.some(
+        (p) => haversineNm([p.lat, p.lon], [n.center!.lat, n.center!.lon]) <= reach,
+      );
+    });
+
+    const criticalCount = relevant.filter((n) => n.significance === 'critical').length;
+    const warningCount = relevant.filter((n) => n.significance === 'warning').length;
+
+    return {
+      total: notams.length,
+      relevantCount: relevant.length,
+      criticalCount,
+      warningCount,
+      items: relevant.slice(0, 8).map((n) => ({
+        ref: n.ref,
+        subject: n.subject,
+        significance: n.significance,
+        scope: n.scope,
+        text: n.text.length > 220 ? n.text.slice(0, 220) + '…' : n.text,
+        schedule: n.schedule,
+        end: n.end,
+        permanent: n.permanent,
+      })),
+      message:
+        relevant.length === 0
+          ? 'No active NOTAMs affecting this route'
+          : `${relevant.length} active NOTAM(s) on route` +
+            (criticalCount ? `, ${criticalCount} restricted/danger area` : ''),
+    };
   }
 }

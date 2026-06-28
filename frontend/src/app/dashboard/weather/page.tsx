@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { weatherApi, hubsApi } from '@/lib/api';
 import { PageHeader } from '@/components/shared/page-header';
+import { NotamBoard } from '@/components/notam/notam-board';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -133,6 +134,9 @@ export default function WeatherPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Live NOTAMs for the Athinai FIR (autorouter) */}
+      <NotamBoard />
 
       {/* Live aviation weather board — real METAR for Greek aerodromes */}
       {metarStations.length > 0 && (
