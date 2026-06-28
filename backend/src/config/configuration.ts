@@ -22,6 +22,20 @@ export default () => ({
     apiKey: process.env.WEATHER_API_KEY || '',
     apiUrl: process.env.WEATHER_API_URL || 'https://api.openweathermap.org/data/2.5',
   },
+  dagr: {
+    // Official Greek UAS geographical-zones WMS (HCAA / HASP). No key required.
+    wmsUrl:
+      process.env.DAGR_WMS_URL ||
+      'https://dagr.hasp.gov.gr/cgi-bin/mapserv.exe?map=C:/ms4w_3.1.4/MAPFILES/dagr_public_wms.map',
+  },
+  openaip: {
+    // openAIP airspace data + map tiles. Key kept server-side (REST + tile proxy).
+    apiKey: process.env.OPENAIP_API_KEY || '',
+  },
+  anthropic: {
+    // Claude API key for the AI authorization agent. Server-side only.
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+  },
   mqtt: {
     brokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
     username: process.env.MQTT_USERNAME || '',

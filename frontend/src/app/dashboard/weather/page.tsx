@@ -13,7 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Cloud, Wind, Eye, Thermometer, Droplets, Gauge, AlertTriangle, Compass, CloudSun } from 'lucide-react';
+import { Cloud, Wind, Eye, Thermometer, Droplets, Gauge, AlertTriangle, Compass, CloudSun, Plane } from 'lucide-react';
+
+interface MetarStation {
+  icaoId: string;
+  name?: string;
+  flightCategory: string | null;
+  tempC: number | null;
+  windDir: number | string | null;
+  windSpeedKt: number | null;
+  windGustKt: number | null;
+  raw: string | null;
+}
 
 export default function WeatherPage() {
   const [selectedHubId, setSelectedHubId] = useState<string>('');
@@ -22,6 +33,38 @@ export default function WeatherPage() {
     queryKey: ['hubs'],
     queryFn: () => hubsApi.getAll().then((r) => r.data),
   });
+
+  // Live aviation weather (real METAR from NOAA) for Greek aerodromes
+  const { data: metarData } = useQuery({
+    queryKey: ['metar'],
+    queryFn: () => weatherApi.getMetar().then((r) => r.data),
+    refetchInterval: 120000,
+  });
+  const metarStations = ((metarData as { stations?: MetarStation[] })?.stations ?? []).filter(
+    (s) => !!s.raw,
+  );
+
+  // GO / CAUTION / NO-GO recommendation per hub (real METAR + SIGMET + Open-Meteo)
+  const hubIds = (
+    (Array.isArray(hubsData) ? hubsData : (hubsData as { data?: unknown[] })?.data || []) as Record<string, unknown>[]
+  ).map((h) => h.id as string);
+  const { data: goNoGoData } = useQuery({
+    queryKey: ['go-no-go-all', hubIds],
+    queryFn: async () => {
+      const results = await Promise.all(
+        hubIds.map((id) => weatherApi.getGoNoGo(id).then((r) => r.data).catch(() => null)),
+      );
+      return results.filter(Boolean) as NonNullable<Awaited<ReturnType<typeof weatherApi.getGoNoGo>>['data']>[];
+    },
+    enabled: hubIds.length > 0,
+    refetchInterval: 120000,
+  });
+
+  const verdictStyle: Record<string, string> = {
+    GO: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
+    CAUTION: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
+    NO_GO: 'border-red-500/50 bg-red-500/10 text-red-400',
+  };
 
   const hubs = Array.isArray(hubsData) ? hubsData : hubsData?.data || [];
   const selectedHub = hubs.find((h: Record<string, unknown>) => h.id === selectedHubId) as
@@ -58,7 +101,88 @@ export default function WeatherPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Weather" description="Real-time weather conditions from Open-Meteo" />
+      <PageHeader title="Weather" description="Live aviation weather (METAR/TAF · NOAA) and hub conditions (Open-Meteo)" />
+
+      {/* GO / CAUTION / NO-GO flight recommendation per hub */}
+      {goNoGoData && goNoGoData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CloudSun className="h-4 w-4 text-emerald-400" />
+              Flight Conditions — GO / NO-GO
+              <span className="text-xs font-normal text-muted-foreground">(real METAR + SIGMET)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {goNoGoData.map((g) => (
+                <div key={g.hubId} className={`rounded border p-2.5 ${verdictStyle[g.verdict]}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold">{g.hubCode}</span>
+                    <span className="font-mono text-xs font-bold">{g.verdict.replace('_', '-')}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    {g.station.icaoId} {g.station.flightCategory || ''} · wind {g.wind.speedMs ?? '—'} m/s
+                  </div>
+                  <div className="text-[10px] mt-1 leading-tight opacity-80">
+                    {g.reasons[0]?.message}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Live aviation weather board — real METAR for Greek aerodromes */}
+      {metarStations.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Plane className="h-4 w-4 text-cyan-400" />
+              Live Aviation Weather — METAR
+              <span className="text-xs font-normal text-muted-foreground">
+                ({metarStations.length} Greek aerodromes · NOAA)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {metarStations.map((s) => (
+                <div
+                  key={s.icaoId}
+                  className="rounded border border-border bg-card/50 p-2.5 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-sm">{s.icaoId}</span>
+                    <span
+                      className={`text-xs font-bold font-mono px-1.5 py-0.5 rounded ${getFlightCategoryColor(
+                        s.flightCategory || '',
+                      )} bg-current/10`}
+                    >
+                      {s.flightCategory || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Thermometer className="h-3 w-3" />
+                      {s.tempC != null ? `${s.tempC}°C` : '—'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Wind className="h-3 w-3" />
+                      {s.windSpeedKt != null ? `${s.windSpeedKt}kt` : '—'}
+                      {s.windDir != null && s.windDir !== 0 ? ` @${s.windDir}°` : ''}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-mono text-muted-foreground/70 leading-tight break-words">
+                    {s.raw}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="max-w-sm">
         <label className="text-base font-medium mb-2 block">Select Hub</label>

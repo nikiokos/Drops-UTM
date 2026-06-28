@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useMissionsStore, Mission, Waypoint, MissionExecution } from '@/store/missions.store';
 import { hubsApi, dronesApi } from '@/lib/api';
+import { AirspaceBriefing } from '@/components/airspace/airspace-briefing';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -165,6 +166,17 @@ export default function MissionDetailPage() {
 
   const departureHub = hubs.find((h) => h.id === departureHubId);
   const arrivalHub = hubs.find((h) => h.id === arrivalHubId);
+
+  // Route points for the airspace/geofence check: waypoints if present, else the hub-to-hub leg.
+  const routePoints = useMemo(() => {
+    if (waypoints.length > 0) {
+      return waypoints.map((wp) => ({ lat: wp.latitude, lon: wp.longitude, alt: wp.altitude }));
+    }
+    const pts: { lat: number; lon: number; alt?: number }[] = [];
+    if (departureHub?.location) pts.push({ lat: departureHub.location.latitude, lon: departureHub.location.longitude, alt: 120 });
+    if (arrivalHub?.location) pts.push({ lat: arrivalHub.location.latitude, lon: arrivalHub.location.longitude, alt: 120 });
+    return pts;
+  }, [waypoints, departureHub, arrivalHub]);
   const statusConfig = STATUS_CONFIG[mission?.status || 'draft'] || STATUS_CONFIG.draft;
   const latestExecution = executions[0];
 
@@ -414,6 +426,7 @@ export default function MissionDetailPage() {
             </TabsList>
 
             <TabsContent value="details" className="flex-1 overflow-auto p-4 space-y-4 m-0">
+              <AirspaceBriefing points={routePoints} />
               <div>
                 <Label htmlFor="name">Mission Name</Label>
                 <Input

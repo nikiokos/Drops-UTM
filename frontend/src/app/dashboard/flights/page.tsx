@@ -30,13 +30,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, ClipboardCheck } from 'lucide-react';
 import { FlightStatus, FlightType, OperationMode } from '@drops-utm/shared';
 import { toast } from '@/hooks/use-toast';
+import { PreFlightBriefingDialog } from '@/components/briefing/pre-flight-briefing-dialog';
 
 export default function FlightsPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [briefingFlightId, setBriefingFlightId] = useState<string | null>(null);
   // Helper to get default departure time (1 hour from now) in datetime-local format
   const getDefaultDeparture = () => {
     const date = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
@@ -261,10 +263,6 @@ export default function FlightsPage() {
           status === FlightStatus.AUTHORIZED?.toLowerCase() ||
           status === 'authorized';
 
-        if (!showAuthorize && !showStart && !showComplete && !showAbort) {
-          return null;
-        }
-
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -273,6 +271,15 @@ export default function FlightsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setBriefingFlightId(id);
+                }}
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Pre-Flight Briefing
+              </DropdownMenuItem>
               {showAuthorize && (
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -488,6 +495,12 @@ export default function FlightsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PreFlightBriefingDialog
+        flightId={briefingFlightId}
+        open={!!briefingFlightId}
+        onOpenChange={(v) => { if (!v) setBriefingFlightId(null); }}
+      />
     </div>
   );
 }

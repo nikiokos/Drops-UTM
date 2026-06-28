@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { conflictsApi } from '@/lib/api';
+import { conflictsApi, hubsApi } from '@/lib/api';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { MapView, type MarkerData, type CircleData } from '@/components/shared/map-view';
+import { MapLayerToggles } from '@/components/shared/map-layer-toggles';
+import { useLiveMapLayers } from '@/hooks/use-live-map-layers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,6 +44,62 @@ export default function ConflictsPage() {
   const allConflicts = Array.isArray(allData) ? allData : allData?.data || [];
   const resolvedConflicts = allConflicts.filter((c: Record<string, unknown>) => c.status === 'resolved' || c.status === 'false_alarm');
 
+  // Situational-awareness map: hubs + live layers + active-conflict locations
+  const { data: hubsData } = useQuery({
+    queryKey: ['hubs'],
+    queryFn: () => hubsApi.getAll().then((r) => r.data),
+  });
+  const hubList = Array.isArray(hubsData) ? hubsData : (hubsData as { data?: unknown[] })?.data || [];
+  const live = useLiveMapLayers({ aircraftDefault: true });
+
+  const hubMarkers: MarkerData[] = useMemo(
+    () =>
+      (hubList as Record<string, unknown>[])
+        .map((h) => {
+          const loc = h.location as { latitude?: number; longitude?: number } | undefined;
+          if (loc?.latitude == null || loc?.longitude == null) return null;
+          return {
+            id: h.id as string,
+            position: [Number(loc.latitude), Number(loc.longitude)] as [number, number],
+            label: `${h.name} (${h.code})`,
+            color: '#10b981',
+          };
+        })
+        .filter(Boolean) as MarkerData[],
+    [hubList],
+  );
+
+  const conflictCircles: CircleData[] = useMemo(
+    () =>
+      (activeConflicts as Record<string, unknown>[])
+        .map((c) => {
+          const loc = c.location as { latitude?: number; longitude?: number } | undefined;
+          if (loc?.latitude == null || loc?.longitude == null) return null;
+          const critical = c.severity === 'critical' || c.severity === 'high';
+          return {
+            id: c.id as string,
+            center: [Number(loc.latitude), Number(loc.longitude)] as [number, number],
+            radius: 1500,
+            color: critical ? '#ef4444' : '#f59e0b',
+            fillColor: critical ? '#ef4444' : '#f59e0b',
+            fillOpacity: 0.15,
+            weight: 2,
+            className: 'conflict-pulse',
+            label: `${String(c.conflictType || 'conflict').replace(/_/g, ' ')} (${c.severity})`,
+          };
+        })
+        .filter(Boolean) as CircleData[],
+    [activeConflicts],
+  );
+
+  const mapCenter: [number, number] = useMemo(() => {
+    if (hubMarkers.length === 0) return [38.5, 23.8];
+    return [
+      hubMarkers.reduce((s, m) => s + m.position[0], 0) / hubMarkers.length,
+      hubMarkers.reduce((s, m) => s + m.position[1], 0) / hubMarkers.length,
+    ];
+  }, [hubMarkers]);
+
   const resolveMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => conflictsApi.resolve(id, data),
     onSuccess: () => {
@@ -72,6 +131,28 @@ export default function ConflictsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Conflicts" description="Monitor and resolve airspace conflicts" />
+
+      {/* Situational-awareness map: live traffic + airspace + active conflicts */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle>Conflict Map</CardTitle>
+            <MapLayerToggles {...live} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <MapView
+            markers={hubMarkers}
+            circles={conflictCircles}
+            aircraftMarkers={live.aircraftMarkers}
+            wmsLayers={live.wmsLayers}
+            overlayTiles={live.overlayTiles}
+            center={mapCenter}
+            zoom={6}
+            className="h-[360px] rounded overflow-hidden"
+          />
+        </CardContent>
+      </Card>
 
       {activeConflicts.length > 0 && (
         <div className="space-y-4">

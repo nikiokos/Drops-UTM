@@ -4,6 +4,8 @@ import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapView } from '@/components/shared/map-view';
+import { MapLayerToggles } from '@/components/shared/map-layer-toggles';
+import { useLiveMapLayers } from '@/hooks/use-live-map-layers';
 import { TelemetryPanel } from '@/components/control/telemetry-panel';
 import { ControlPanel } from '@/components/control/control-panel';
 import { CommandHistory } from '@/components/control/command-history';
@@ -24,7 +26,7 @@ export default function ControlCenterPage() {
   const { data: flights } = useQuery({
     queryKey: ['flights'],
     queryFn: () => flightsApi.getAll().then((r) => r.data),
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
   const { data: hubs } = useQuery({
@@ -43,6 +45,9 @@ export default function ControlCenterPage() {
   // Telemetry store
   const telemetryDrones = useTelemetryStore((state) => state.drones);
   const simulatorRef = useRef(getTelemetrySimulator());
+
+  // Shared live map layers (ADS-B traffic, openAIP airspace, DAGR drone zones)
+  const live = useLiveMapLayers({ aircraftDefault: true });
 
   // Commands store
   const commandsHistory = useCommandsStore((state) => state.history);
@@ -363,14 +368,15 @@ export default function ControlCenterPage() {
         {/* Left column: Map */}
         <Card className="min-h-[500px]">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-primary" />
                 <CardTitle>Tactical View</CardTitle>
+                <p className="text-xs text-muted-foreground font-mono tracking-wider hidden xl:block">
+                  {hubMarkers.length} HUBS | {droneMarkers.length} ACTIVE | {live.aircraftMarkers.length} ADS-B
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground font-mono tracking-wider">
-                {hubMarkers.length} HUBS | {droneMarkers.length} ACTIVE
-              </p>
+              <MapLayerToggles {...live} />
             </div>
           </CardHeader>
           <CardContent>
@@ -379,6 +385,9 @@ export default function ControlCenterPage() {
                 markers={hubMarkers}
                 polylines={flightPolylines}
                 droneMarkers={droneMarkers}
+                aircraftMarkers={live.aircraftMarkers}
+                wmsLayers={live.wmsLayers}
+                overlayTiles={live.overlayTiles}
                 center={mapCenter}
                 zoom={selectedDrone ? 12 : 6}
                 trackingId={selectedFlightId || undefined}

@@ -164,14 +164,18 @@ export class FleetController {
 
   @Get('rebalancing/history')
   async getRebalancingHistory(
-    @Query('limit') limit: number = 20,
-    @Query('offset') offset: number = 0,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ): Promise<RebalancingTask[]> {
+    // Guard against missing/NaN query params (global ValidationPipe's implicit
+    // conversion turns absent params into NaN, which TypeORM rejects → 500).
+    const take = Math.min(Math.max(Number(limit) || 20, 1), 200);
+    const skip = Math.max(Number(offset) || 0, 0);
     return this.rebalancingRepository.find({
       relations: ['sourceHub', 'targetHub', 'drone'],
       order: { createdAt: 'DESC' },
-      take: limit,
-      skip: offset,
+      take,
+      skip,
     });
   }
 

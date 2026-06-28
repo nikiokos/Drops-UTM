@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { AirspaceService } from './airspace.service';
+import { AirspaceService, type AirspaceCheckPoint } from './airspace.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('Airspace')
@@ -8,6 +8,18 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @Controller('airspace')
 export class AirspaceController {
   constructor(private readonly airspaceService: AirspaceService) {}
+
+  @Post('check')
+  @ApiOperation({ summary: 'Geofence-check a single 3D point against local + openAIP airspace' })
+  checkPoint(@Body() body: { lat: number; lon: number; alt?: number }) {
+    return this.airspaceService.checkPoint(Number(body.lat), Number(body.lon), Number(body.alt ?? 0));
+  }
+
+  @Post('check-path')
+  @ApiOperation({ summary: 'Geofence-check a planned route (waypoint polyline)' })
+  checkPath(@Body() body: { points: AirspaceCheckPoint[]; spacingM?: number }) {
+    return this.airspaceService.checkPath(body.points ?? [], body.spacingM ?? 200);
+  }
 
   @Get('zones')
   @ApiOperation({ summary: 'List airspace zones' })

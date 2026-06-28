@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plane, Building2, Bot, AlertTriangle, Activity } from 'lucide-react';
+import { Plane, Building2, Bot, AlertTriangle, Activity, PlaneTakeoff, ShieldAlert, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { MapView } from '@/components/shared/map-view';
-import { flightsApi, hubsApi, dronesApi, conflictsApi, airspaceApi } from '@/lib/api';
+import { flightsApi, hubsApi, dronesApi, conflictsApi, airspaceApi, adsbApi, dagrApi, openaipApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { getTelemetrySimulator } from '@/lib/telemetry-simulator';
 import { useTelemetryStore } from '@/store/telemetry.store';
-import type { MarkerData, PolylineData, PolygonData, DroneMarkerData } from '@/components/shared/map-view';
+import { useConflictDetection } from '@/hooks/use-conflict-detection';
+import type { MarkerData, PolylineData, PolygonData, CircleData, DroneMarkerData, AircraftMarkerData, WmsLayerData, OverlayTileData } from '@/components/shared/map-view';
 import type { LucideIcon } from 'lucide-react';
 
 function StatCard({
@@ -108,6 +109,26 @@ export default function DashboardPage() {
   const { data: zones } = useQuery({
     queryKey: ['airspace-zones'],
     queryFn: () => airspaceApi.getZones().then((r) => r.data),
+  });
+
+  // Layer visibility toggles
+  const [showAircraft, setShowAircraft] = useState(true);
+  const [showDroneZones, setShowDroneZones] = useState(false);
+  const [showAirspace, setShowAirspace] = useState(false);
+
+  // Live manned-aircraft traffic (ADS-B), polled server-side
+  const { data: adsbData } = useQuery({
+    queryKey: ['adsb-aircraft'],
+    queryFn: () => adsbApi.getAircraft().then((r) => r.data),
+    refetchInterval: 5000,
+    enabled: showAircraft,
+  });
+
+  // Official Greek drone-zone WMS config (DAGR) — fetched once
+  const { data: dagrConfig } = useQuery({
+    queryKey: ['dagr-config'],
+    queryFn: () => dagrApi.getConfig().then((r) => r.data),
+    staleTime: Infinity,
   });
 
   const flightList = useMemo(() => Array.isArray(flights) ? flights : flights?.data || [], [flights]);
@@ -274,6 +295,100 @@ export default function DashboardPage() {
     batteryLevel: drone.batteryLevel,
   }));
 
+  // Live manned-aircraft markers (real ADS-B)
+  const aircraftMarkers: AircraftMarkerData[] = useMemo(
+    () =>
+      showAircraft
+        ? (adsbData?.aircraft ?? [])
+            .filter((a) => typeof a.lat === 'number' && typeof a.lon === 'number')
+            .map((a) => ({
+              id: a.hex,
+              position: [a.lat, a.lon] as [number, number],
+              callsign: a.callsign,
+              altitude: a.altitude,
+              groundSpeed: a.groundSpeed,
+              track: a.track,
+              type: a.type,
+              registration: a.registration,
+              onGround: a.onGround,
+              emergency: a.emergency,
+            }))
+        : [],
+    [showAircraft, adsbData],
+  );
+
+  // Official Greek drone-zone WMS overlay (DAGR)
+  const wmsLayers: WmsLayerData[] = useMemo(
+    () =>
+      showDroneZones && dagrConfig
+        ? [
+            {
+              id: 'dagr-limitations',
+              url: dagrConfig.wmsUrl,
+              layers: dagrConfig.layers.limitations,
+              version: dagrConfig.version,
+              opacity: 0.55,
+              attribution: dagrConfig.attribution,
+            },
+          ]
+        : [],
+    [showDroneZones, dagrConfig],
+  );
+
+  // openAIP airspace raster overlay (CTR/TMA/restricted zones, airports)
+  const overlayTiles: OverlayTileData[] = useMemo(
+    () =>
+      showAirspace
+        ? [
+            {
+              id: 'openaip',
+              url: openaipApi.tileUrl(),
+              opacity: 0.9,
+              attribution: 'Airspace © openAIP (CC BY-NC-SA)',
+            },
+          ]
+        : [],
+    [showAirspace],
+  );
+
+  // Live drone ↔ manned-aircraft conflict detection (real ADS-B vs simulated drones)
+  const droneList2 = useMemo(() => Object.values(telemetryDrones), [telemetryDrones]);
+  const airConflicts = useConflictDetection(droneList2, adsbData?.aircraft ?? []);
+  const liveConflictCount = useMemo(
+    () => airConflicts.filter((c) => c.tier === 'WARNING').length,
+    [airConflicts],
+  );
+
+  const conflictPolylines: PolylineData[] = useMemo(
+    () =>
+      airConflicts.map((c) => ({
+        id: `cf-line-${c.pairId}`,
+        positions: [c.dronePos, c.aircraftPos],
+        color: c.tier === 'WARNING' ? '#ef4444' : '#f59e0b',
+        weight: c.tier === 'WARNING' ? 3 : 2,
+        opacity: 0.95,
+        dashArray: '6 4',
+        className: 'conflict-pulse',
+        label: `⚠ ${c.droneFlightNumber} ↔ ${c.aircraftCallsign || c.aircraftHex} · ${c.horizontalNm} NM / ${c.verticalFt} ft`,
+      })),
+    [airConflicts],
+  );
+
+  const conflictCircles: CircleData[] = useMemo(
+    () =>
+      airConflicts.map((c) => ({
+        id: `cf-ring-${c.pairId}`,
+        center: c.dronePos,
+        radius: c.tier === 'WARNING' ? 2778 : 5556, // 1.5 NM / 3 NM
+        color: c.tier === 'WARNING' ? '#ef4444' : '#f59e0b',
+        fillColor: c.tier === 'WARNING' ? '#ef4444' : '#f59e0b',
+        fillOpacity: 0.08,
+        weight: 1.5,
+        className: 'conflict-pulse',
+      })),
+    [airConflicts],
+  );
+
   return (
     <div className="space-y-5 max-w-7xl">
       {/* Header with live indicator */}
@@ -320,10 +435,16 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Conflicts"
-          value={conflictList.length}
-          subtitle={conflictList.length > 0 ? 'Action Required' : 'All Clear'}
+          value={conflictList.length + liveConflictCount}
+          subtitle={
+            liveConflictCount > 0
+              ? `${liveConflictCount} air-traffic`
+              : conflictList.length > 0
+                ? 'Action Required'
+                : 'All Clear'
+          }
           icon={AlertTriangle}
-          accentColor={conflictList.length > 0 ? 'red' : 'green'}
+          accentColor={conflictList.length + liveConflictCount > 0 ? 'red' : 'green'}
         />
       </div>
 
@@ -333,18 +454,63 @@ export default function DashboardPage() {
           <div>
             <CardTitle>Tactical Map</CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5 font-mono tracking-wider">
-              {hubMarkers.length} HUBS | {flightPolylines.length} FLIGHTS | {droneMarkers.length} DRONES | {airspacePolygons.length} ZONES
+              {hubMarkers.length} HUBS | {flightPolylines.length} FLIGHTS | {droneMarkers.length} DRONES | {aircraftMarkers.length} ADS-B | {airspacePolygons.length} ZONES
+              {airConflicts.length > 0 && (
+                <span className="text-red-400"> | {airConflicts.length} CONFLICTS</span>
+              )}
             </p>
           </div>
-          <RadarWidget />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAircraft((v) => !v)}
+              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                showAircraft
+                  ? 'border-amber-400/40 bg-amber-400/10 text-amber-400'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Live manned-aircraft traffic (ADS-B / adsb.lol)"
+            >
+              <PlaneTakeoff className="h-3 w-3" /> Live Traffic
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAirspace((v) => !v)}
+              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                showAirspace
+                  ? 'border-blue-400/40 bg-blue-400/10 text-blue-400'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Airspace structure: CTR/TMA/restricted zones + aerodromes (openAIP)"
+            >
+              <Layers className="h-3 w-3" /> Airspace
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDroneZones((v) => !v)}
+              className={`flex items-center gap-1.5 rounded border px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                showDroneZones
+                  ? 'border-red-400/40 bg-red-400/10 text-red-400'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Official Greek drone geographical zones (DAGR / HASP)"
+            >
+              <ShieldAlert className="h-3 w-3" /> Drone Zones
+            </button>
+            <RadarWidget />
+          </div>
         </CardHeader>
         <CardContent>
           {hubMarkers.length > 0 ? (
             <MapView
               markers={hubMarkers}
-              polylines={flightPolylines}
+              polylines={[...flightPolylines, ...conflictPolylines]}
               polygons={airspacePolygons}
+              circles={conflictCircles}
               droneMarkers={droneMarkers}
+              aircraftMarkers={aircraftMarkers}
+              wmsLayers={wmsLayers}
+              overlayTiles={overlayTiles}
               center={
                 hubMarkers.length > 1
                   ? [

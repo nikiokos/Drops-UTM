@@ -78,6 +78,24 @@ export const conflictsApi = {
     api.post(`/conflicts/${id}/resolve`, data),
 };
 
+export interface AirspaceBreach {
+  source: 'local' | 'openaip';
+  zoneId?: string;
+  name: string;
+  zoneType: string;
+  floorM: number | null;
+  ceilingM: number | null;
+  altitudeOverlap: boolean;
+  severity: 'critical' | 'warning' | 'info';
+}
+
+export interface AirspaceCheckResult {
+  sampleCount: number;
+  breachCount: number;
+  worstSeverity: 'critical' | 'warning' | 'info' | null;
+  breaches: AirspaceBreach[];
+}
+
 export const airspaceApi = {
   getZones: (params?: Record<string, unknown>) => api.get('/airspace/zones', { params }),
   getZoneById: (id: string) => api.get(`/airspace/zones/${id}`),
@@ -85,13 +103,35 @@ export const airspaceApi = {
   updateZone: (id: string, data: Record<string, unknown>) =>
     api.put(`/airspace/zones/${id}`, data),
   deleteZone: (id: string) => api.delete(`/airspace/zones/${id}`),
+  // Geofence checks (local zones + openAIP airspace)
+  checkPoint: (lat: number, lon: number, alt?: number) =>
+    api.post<AirspaceBreach[]>('/airspace/check', { lat, lon, alt }),
+  checkPath: (points: { lat: number; lon: number; alt?: number }[], spacingM?: number) =>
+    api.post<AirspaceCheckResult>('/airspace/check-path', { points, spacingM }),
 };
 
 export const weatherApi = {
   getCurrent: (hubId: string) => api.get(`/weather/current/${hubId}`),
   getForecast: (hubId: string) => api.get(`/weather/forecast/${hubId}`),
   getAlerts: (hubId: string) => api.get(`/weather/alerts/${hubId}`),
+  // Live aviation weather (NOAA) — real METAR/TAF/SIGMET for Greek aerodromes
+  getMetar: (ids?: string) => api.get('/weather/metar', { params: ids ? { ids } : {} }),
+  getTaf: (ids?: string) => api.get('/weather/taf', { params: ids ? { ids } : {} }),
+  getSigmet: () => api.get('/weather/sigmet'),
+  getGoNoGo: (hubId: string) => api.get<GoNoGoResult>(`/weather/go-no-go/${hubId}`),
 };
+
+export interface GoNoGoResult {
+  hubId: string;
+  hubName: string;
+  hubCode: string;
+  verdict: 'GO' | 'CAUTION' | 'NO_GO';
+  station: { icaoId: string; flightCategory: string | null; observedAt: string | null };
+  wind: { speedMs: number | null; gustMs: number | null };
+  visibilityM: number | null;
+  reasons: Array<{ rule: string; verdict: 'GO' | 'CAUTION' | 'NO_GO'; message: string; source: string }>;
+  checkedAt: string;
+}
 
 export const commandsApi = {
   send: (droneId: string, data: { commandType: string; flightId?: string; parameters?: Record<string, unknown> }) =>
@@ -788,4 +828,137 @@ export const connectivityApi = {
       pendingCount: number;
       byPriority: Record<string, number>;
     }>('/connectivity/commands/stats'),
+};
+
+// ── Live external data integrations ──
+
+export interface LiveAircraft {
+  hex: string;
+  callsign: string | null;
+  lat: number;
+  lon: number;
+  altitude: number | null;
+  groundSpeed: number | null;
+  track: number | null;
+  verticalRate: number | null;
+  type: string | null;
+  registration: string | null;
+  onGround: boolean;
+  squawk: string | null;
+  emergency: boolean;
+}
+
+// Live manned-aircraft traffic (ADS-B via adsb.lol, server-proxied)
+export const adsbApi = {
+  getAircraft: () =>
+    api.get<{
+      count: number;
+      updatedAt: string;
+      source: string;
+      attribution: string;
+      aircraft: LiveAircraft[];
+    }>('/adsb/aircraft'),
+};
+
+export interface DagrConfig {
+  wmsUrl: string;
+  version: string;
+  layers: { limitations: string; approvedFlightsHeatmap: string };
+  attribution: string;
+}
+
+// Official Greek drone geographical zones (DAGR / HASP WMS)
+export const dagrApi = {
+  getConfig: () => api.get<DagrConfig>('/dagr/config'),
+  getFeatureInfo: (params: Record<string, string>) =>
+    api.get<{ html: string }>('/dagr/feature-info', { params }),
+  checkPoints: (points: { lat: number; lon: number }[]) =>
+    api.post<{ lat: number; lon: number; hit: boolean }[]>('/dagr/check-points', { points }),
+};
+
+export interface OpenaipAirspace {
+  id?: string;
+  name?: string;
+  type?: number;
+  icaoClass?: number;
+  upperLimit?: { value: number; unit: number; referenceDatum: number };
+  lowerLimit?: { value: number; unit: number; referenceDatum: number };
+  geometry?: { type: string; coordinates: number[][][] };
+}
+
+// openAIP airspace structure + proxied raster tiles (key kept server-side)
+export const openaipApi = {
+  getAirspaces: () =>
+    api.get<{
+      count: number;
+      enabled: boolean;
+      source: string;
+      attribution: string;
+      airspaces: OpenaipAirspace[];
+    }>('/openaip/airspaces'),
+  // Leaflet tile template served by our backend proxy (public, no key in browser)
+  tileUrl: () => `${API_URL}/openaip/tiles/{z}/{x}/{y}`,
+};
+
+// ── Pre-flight briefing (composed weather + airspace + traffic + NOTAM) ──
+export interface BriefingResult {
+  flightId: string;
+  flightNumber: string;
+  verdict: 'GREEN' | 'AMBER' | 'RED';
+  route: {
+    departureHub: string | null;
+    arrivalHub: string | null;
+    points: { lat: number; lon: number; alt: number }[];
+    altitudeM: number;
+  };
+  sections: {
+    weather: {
+      status: string;
+      verdict?: string;
+      flightCategory?: string | null;
+      windMs?: number | null;
+      icao?: string;
+      reasons?: string[];
+    };
+    airspace: {
+      status: string;
+      breachCount?: number;
+      worstSeverity?: string | null;
+      breaches?: { name: string; zoneType: string; severity: string; source: string }[];
+    };
+    traffic: {
+      status: string;
+      nearbyCount?: number;
+      cautionCount?: number;
+      warningCount?: number;
+      nearest?: { callsign: string | null; hex: string; distanceNm: number; altFt: number | null } | null;
+    };
+    notam: { status: string; message: string };
+  };
+  generatedAt: string;
+}
+
+export const briefingApi = {
+  getFlightBriefing: (id: string) => api.get<BriefingResult>(`/briefing/flight/${id}`),
+};
+
+export interface AiAssessment {
+  flightId: string;
+  flightNumber: string;
+  enabled: boolean;
+  deterministicVerdict: 'GREEN' | 'AMBER' | 'RED';
+  model: string;
+  ai: {
+    decision: 'GO' | 'GO_WITH_CONDITIONS' | 'NO_GO';
+    confidence: 'low' | 'medium' | 'high';
+    blockingReasons: string[];
+    conditions: string[];
+    humanSummary: string;
+  } | null;
+  generatedAt: string;
+}
+
+// AI authorization assessment (Claude reasons over the briefing)
+export const aiBriefingApi = {
+  assessFlight: (id: string) => api.get<AiAssessment>(`/briefing/flight/${id}/assess`),
 };

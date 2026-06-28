@@ -30,6 +30,10 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ConnectivityModule } from './modules/connectivity/connectivity.module';
 import { SimulationModule } from './modules/simulation/simulation.module';
 import { IntegrationModule } from './modules/integration/integration.module';
+import { AdsbModule } from './modules/adsb/adsb.module';
+import { DagrModule } from './modules/dagr/dagr.module';
+import { OpenaipModule } from './modules/openaip/openaip.module';
+import { BriefingModule } from './modules/briefing/briefing.module';
 
 @Module({
   imports: [
@@ -66,6 +70,10 @@ import { IntegrationModule } from './modules/integration/integration.module';
     ConnectivityModule,
     SimulationModule,
     IntegrationModule,
+    AdsbModule,
+    DagrModule,
+    OpenaipModule,
+    BriefingModule,
   ],
   providers: [
     // Global JWT authentication guard - requires auth for all routes except @Public()

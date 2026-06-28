@@ -51,6 +51,7 @@ interface PolylineData {
   opacity?: number;
   dashArray?: string;
   label?: string;
+  className?: string;
 }
 
 interface PolygonData {
@@ -72,6 +73,7 @@ interface CircleData {
   fillOpacity?: number;
   weight?: number;
   label?: string;
+  className?: string;
 }
 
 interface DroneMarkerData {
@@ -84,6 +86,35 @@ interface DroneMarkerData {
   batteryLevel: number;
 }
 
+interface AircraftMarkerData {
+  id: string;
+  position: [number, number];
+  callsign: string | null;
+  altitude: number | null;
+  groundSpeed: number | null;
+  track: number | null;
+  type: string | null;
+  registration: string | null;
+  onGround: boolean;
+  emergency: boolean;
+}
+
+interface WmsLayerData {
+  id: string;
+  url: string;
+  layers: string;
+  version?: string;
+  opacity?: number;
+  attribution?: string;
+}
+
+interface OverlayTileData {
+  id: string;
+  url: string;
+  opacity?: number;
+  attribution?: string;
+}
+
 interface MapViewProps {
   center?: [number, number];
   zoom?: number;
@@ -92,6 +123,9 @@ interface MapViewProps {
   polygons?: PolygonData[];
   circles?: CircleData[];
   droneMarkers?: DroneMarkerData[];
+  aircraftMarkers?: AircraftMarkerData[];
+  wmsLayers?: WmsLayerData[];
+  overlayTiles?: OverlayTileData[];
   className?: string;
   trackingId?: string; // Pass this to only recenter when tracking target changes
 }
@@ -101,14 +135,14 @@ const MapInner = dynamic(
   { ssr: false, loading: () => <div className="flex h-full items-center justify-center bg-card rounded-lg border"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> },
 );
 
-export function MapView({ center = [38.5, 23.8], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], className, trackingId }: MapViewProps) {
+export function MapView({ center = [38.5, 23.8], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], aircraftMarkers = [], wmsLayers = [], overlayTiles = [], className, trackingId }: MapViewProps) {
   return (
     <div className={className}>
       <MapErrorBoundary>
-        <MapInner center={center} zoom={zoom} markers={markers} polylines={polylines} polygons={polygons} circles={circles} droneMarkers={droneMarkers} trackingId={trackingId} />
+        <MapInner center={center} zoom={zoom} markers={markers} polylines={polylines} polygons={polygons} circles={circles} droneMarkers={droneMarkers} aircraftMarkers={aircraftMarkers} wmsLayers={wmsLayers} overlayTiles={overlayTiles} trackingId={trackingId} />
       </MapErrorBoundary>
     </div>
   );
 }
 
-export type { MarkerData, PolylineData, PolygonData, CircleData, DroneMarkerData, MapViewProps };
+export type { MarkerData, PolylineData, PolygonData, CircleData, DroneMarkerData, AircraftMarkerData, WmsLayerData, OverlayTileData, MapViewProps };

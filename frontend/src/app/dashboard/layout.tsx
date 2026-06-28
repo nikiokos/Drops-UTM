@@ -15,17 +15,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s._hasHydrated);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const pendingConfirmations = useEmergencyStore((s) => s.pendingConfirmations);
 
+  // Only redirect once the persisted auth store has rehydrated — otherwise a
+  // full page refresh briefly sees isAuthenticated=false and bounces to /login.
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (hasHydrated && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
 
   // Pre-warm cache during render (fires immediately, not after paint like useEffect)
-  if (isAuthenticated) {
+  if (hasHydrated && isAuthenticated) {
     queryClient.prefetchQuery({ queryKey: ['hubs'], queryFn: () => hubsApi.getAll().then((r) => r.data) });
     queryClient.prefetchQuery({ queryKey: ['drones'], queryFn: () => dronesApi.getAll().then((r) => r.data) });
     queryClient.prefetchQuery({ queryKey: ['flights'], queryFn: () => flightsApi.getAll().then((r) => r.data) });
@@ -38,7 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [pendingConfirmations.length, confirmModalOpen]);
 
-  if (!isAuthenticated) {
+  if (!hasHydrated || !isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

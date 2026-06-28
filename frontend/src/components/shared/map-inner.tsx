@@ -1,11 +1,12 @@
 'use client';
 
 import '@/lib/leaflet-fix';
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents, Polyline, Polygon, Circle, Tooltip } from 'react-leaflet';
+import { memo, useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, WMSTileLayer, CircleMarker, Popup, useMap, useMapEvents, Polyline, Polygon, Circle, Tooltip } from 'react-leaflet';
 import { useTheme } from 'next-themes';
 import 'leaflet/dist/leaflet.css';
 import { DroneMarker, type DroneMarkerData } from './drone-marker';
+import { AircraftMarker, type AircraftMarkerData } from './aircraft-marker';
 
 const tooltipStyle = { className: 'map-tooltip-lg' } as const;
 
@@ -29,6 +30,7 @@ interface PolylineData {
   opacity?: number;
   dashArray?: string;
   label?: string;
+  className?: string;
 }
 
 interface PolygonData {
@@ -50,6 +52,23 @@ interface CircleData {
   fillOpacity?: number;
   weight?: number;
   label?: string;
+  className?: string;
+}
+
+interface WmsLayerData {
+  id: string;
+  url: string;
+  layers: string;
+  version?: string;
+  opacity?: number;
+  attribution?: string;
+}
+
+interface OverlayTileData {
+  id: string;
+  url: string;
+  opacity?: number;
+  attribution?: string;
 }
 
 interface MapInnerProps {
@@ -60,6 +79,9 @@ interface MapInnerProps {
   polygons?: PolygonData[];
   circles?: CircleData[];
   droneMarkers?: DroneMarkerData[];
+  aircraftMarkers?: AircraftMarkerData[];
+  wmsLayers?: WmsLayerData[];
+  overlayTiles?: OverlayTileData[];
   trackingId?: string; // ID of entity to track - only recenter when this changes
 }
 
@@ -111,7 +133,7 @@ function MapController({
   return null;
 }
 
-export function MapInner({ center, zoom, markers, polylines = [], polygons = [], circles = [], droneMarkers = [], trackingId }: MapInnerProps) {
+function MapInnerImpl({ center, zoom, markers, polylines = [], polygons = [], circles = [], droneMarkers = [], aircraftMarkers = [], wmsLayers = [], overlayTiles = [], trackingId }: MapInnerProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -134,6 +156,28 @@ export function MapInner({ center, zoom, markers, polylines = [], polygons = [],
         url={tileUrl}
       />
       <MapController center={center} zoom={zoom} trackingId={trackingId} />
+      {wmsLayers.map((w) => (
+        <WMSTileLayer
+          key={w.id}
+          url={w.url}
+          params={{
+            layers: w.layers,
+            format: 'image/png',
+            transparent: true,
+            version: w.version || '1.3.0',
+          }}
+          opacity={w.opacity ?? 0.6}
+          attribution={w.attribution}
+        />
+      ))}
+      {overlayTiles.map((t) => (
+        <TileLayer
+          key={t.id}
+          url={t.url}
+          opacity={t.opacity ?? 1}
+          attribution={t.attribution}
+        />
+      ))}
       {markers.map((marker) => (
         <CircleMarker
           key={marker.id}
@@ -172,6 +216,7 @@ export function MapInner({ center, zoom, markers, polylines = [], polygons = [],
             fillColor: circle.fillColor || circle.color || '#06b6d4',
             fillOpacity: circle.fillOpacity ?? 0.08,
             weight: circle.weight ?? 1,
+            className: circle.className,
           }}
         >
           {circle.label && <Tooltip sticky {...tooltipStyle}>{circle.label}</Tooltip>}
@@ -186,6 +231,7 @@ export function MapInner({ center, zoom, markers, polylines = [], polygons = [],
             weight: polyline.weight ?? 2,
             opacity: polyline.opacity ?? 0.7,
             dashArray: polyline.dashArray,
+            className: polyline.className,
           }}
         >
           {polyline.label && <Tooltip sticky {...tooltipStyle}>{polyline.label}</Tooltip>}
@@ -194,6 +240,11 @@ export function MapInner({ center, zoom, markers, polylines = [], polygons = [],
       {droneMarkers.map((drone) => (
         <DroneMarker key={drone.id} data={drone} />
       ))}
+      {aircraftMarkers.map((ac) => (
+        <AircraftMarker key={ac.id} data={ac} />
+      ))}
     </MapContainer>
   );
 }
+
+export const MapInner = memo(MapInnerImpl);
