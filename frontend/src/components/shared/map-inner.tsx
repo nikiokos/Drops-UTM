@@ -83,6 +83,7 @@ interface MapInnerProps {
   wmsLayers?: WmsLayerData[];
   overlayTiles?: OverlayTileData[];
   trackingId?: string; // ID of entity to track - only recenter when this changes
+  children?: React.ReactNode;
 }
 
 // Track user interaction and only recenter when tracking target changes
@@ -133,7 +134,7 @@ function MapController({
   return null;
 }
 
-function MapInnerImpl({ center, zoom, markers, polylines = [], polygons = [], circles = [], droneMarkers = [], aircraftMarkers = [], wmsLayers = [], overlayTiles = [], trackingId }: MapInnerProps) {
+function MapInnerImpl({ center, zoom, markers, polylines = [], polygons = [], circles = [], droneMarkers = [], aircraftMarkers = [], wmsLayers = [], overlayTiles = [], trackingId, children }: MapInnerProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -243,6 +244,7 @@ function MapInnerImpl({ center, zoom, markers, polylines = [], polygons = [], ci
       {aircraftMarkers.map((ac) => (
         <AircraftMarker key={ac.id} data={ac} />
       ))}
+      {children}
     </MapContainer>
   );
 }

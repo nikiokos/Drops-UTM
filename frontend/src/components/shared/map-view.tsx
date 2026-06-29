@@ -128,6 +128,7 @@ interface MapViewProps {
   overlayTiles?: OverlayTileData[];
   className?: string;
   trackingId?: string; // Pass this to only recenter when tracking target changes
+  children?: ReactNode;
 }
 
 const MapInner = dynamic(
@@ -135,11 +136,11 @@ const MapInner = dynamic(
   { ssr: false, loading: () => <div className="flex h-full items-center justify-center bg-card rounded-lg border"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div> },
 );
 
-export function MapView({ center = [38.5, 23.8], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], aircraftMarkers = [], wmsLayers = [], overlayTiles = [], className, trackingId }: MapViewProps) {
+export function MapView({ center = [38.5, 23.8], zoom = 10, markers = [], polylines = [], polygons = [], circles = [], droneMarkers = [], aircraftMarkers = [], wmsLayers = [], overlayTiles = [], className, trackingId, children }: MapViewProps) {
   return (
     <div className={className}>
       <MapErrorBoundary>
-        <MapInner center={center} zoom={zoom} markers={markers} polylines={polylines} polygons={polygons} circles={circles} droneMarkers={droneMarkers} aircraftMarkers={aircraftMarkers} wmsLayers={wmsLayers} overlayTiles={overlayTiles} trackingId={trackingId} />
+        <MapInner center={center} zoom={zoom} markers={markers} polylines={polylines} polygons={polygons} circles={circles} droneMarkers={droneMarkers} aircraftMarkers={aircraftMarkers} wmsLayers={wmsLayers} overlayTiles={overlayTiles} trackingId={trackingId}>{children}</MapInner>
       </MapErrorBoundary>
     </div>
   );
