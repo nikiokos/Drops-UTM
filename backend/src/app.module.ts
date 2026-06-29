@@ -36,6 +36,7 @@ import { OpenaipModule } from './modules/openaip/openaip.module';
 import { BriefingModule } from './modules/briefing/briefing.module';
 import { NotamModule } from './modules/notam/notam.module';
 import { CopilotModule } from './modules/copilot/copilot.module';
+import { ForesightModule } from './modules/foresight/foresight.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { CopilotModule } from './modules/copilot/copilot.module';
     BriefingModule,
     NotamModule,
     CopilotModule,
+    ForesightModule,
   ],
   providers: [
     // Global JWT authentication guard - requires auth for all routes except @Public()
