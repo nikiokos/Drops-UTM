@@ -199,7 +199,11 @@ export class PredictionService {
     }
 
     // 3) Demo scenario objects (deterministic, advanced to now).
-    objects.push(...this.demo.getObjects());
+    try {
+      objects.push(...this.demo.getObjects());
+    } catch {
+      // best-effort
+    }
 
     return objects;
   }

@@ -74,7 +74,6 @@ describe('PredictionService.predictFromObjects', () => {
     const held = svc.predictFromObjects(crossing, { horizonSec: 600, stepSec: 5 }, [
       { objectId: 'a', kind: 'hold', delaySec: 120 },
     ]);
-    const c = held.predictedConflicts[0];
-    expect(c === undefined || c.minSeparationM >= 150).toBe(true);
+    expect(held.predictedConflicts.length).toBe(0);
   });
 });
