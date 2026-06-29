@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { foresightApi } from '@/lib/api';
 import { useForesightStore } from '@/store/foresight.store';
+import { AirTrafficDirectorPanel } from './air-traffic-director-panel';
 
 export function ForesightControls() {
-  const { engaged, timeline, playheadSec, set, reset } = useForesightStore();
+  const { engaged, timeline, playheadSec, focusConflict, set, reset } = useForesightStore();
+  const advice = useForesightStore((s) => s.advice);
+  const resolved = useForesightStore((s) => s.resolved);
 
   // Poll predictions while engaged (every 3s, matching ADS-B cadence).
   useEffect(() => {
@@ -31,6 +34,13 @@ export function ForesightControls() {
       clearInterval(h);
     };
   }, [engaged, set]);
+
+  useEffect(() => {
+    if (!focusConflict || advice) return;
+    let alive = true;
+    foresightApi.advise(focusConflict).then(({ data }) => { if (alive) set({ advice: data }); }).catch(() => {});
+    return () => { alive = false; };
+  }, [focusConflict, advice, set]);
 
   const runDemo = async () => {
     await foresightApi.startDemo();
@@ -82,7 +92,12 @@ export function ForesightControls() {
         </div>
       )}
 
-      {/* Task 10: Director panel + resolved banner render here */}
+      {resolved && (
+        <div className="rounded bg-emerald-500/10 px-2 py-1 text-center text-xs font-semibold text-emerald-500">
+          RESOLVED — separation restored
+        </div>
+      )}
+      {!resolved && advice && <AirTrafficDirectorPanel advice={advice} />}
     </div>
   );
 }
