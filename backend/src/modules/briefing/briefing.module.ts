@@ -12,5 +12,6 @@ import { NotamModule } from '../notam/notam.module';
   imports: [FlightsModule, WeatherModule, AirspaceModule, AdsbModule, AiModule, NotamModule],
   providers: [BriefingService],
   controllers: [BriefingController],
+  exports: [BriefingService],
 })
 export class BriefingModule {}

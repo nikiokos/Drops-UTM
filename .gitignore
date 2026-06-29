@@ -49,3 +49,6 @@ backend/data/*.sqlite
 
 # Claude Code local config
 .claude/
+
+# Playwright MCP scratch
+.playwright-mcp/

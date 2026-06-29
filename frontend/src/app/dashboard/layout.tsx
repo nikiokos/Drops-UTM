@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { Toaster } from '@/components/ui/toaster';
 import { EmergencyBanner } from '@/components/emergency/emergency-banner';
 import { EmergencyConfirmationModal } from '@/components/emergency/confirmation-modal';
+import { CopilotWidget } from '@/components/copilot/copilot-widget';
 import { useEmergencyStore } from '@/store/emergency.store';
 import { hubsApi, dronesApi, flightsApi } from '@/lib/api';
 
@@ -67,6 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <Toaster />
+      <CopilotWidget />
       <EmergencyConfirmationModal
         open={confirmModalOpen}
         onOpenChange={setConfirmModalOpen}

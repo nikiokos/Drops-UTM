@@ -1015,3 +1015,41 @@ export interface AiAssessment {
 export const aiBriefingApi = {
   assessFlight: (id: string) => api.get<AiAssessment>(`/briefing/flight/${id}/assess`),
 };
+
+// ── Operations Copilot (tool-using Claude agent over live UTM data) ──
+export interface CopilotMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ToolTraceEntry {
+  tool: string;
+  input: Record<string, unknown>;
+  kind: 'read' | 'action';
+  ok: boolean;
+}
+
+export interface ProposedAction {
+  kind: string;
+  label: string;
+  method: 'POST' | 'PUT' | 'PATCH';
+  path: string;
+  body?: Record<string, unknown>;
+  rationale: string;
+}
+
+export interface CopilotChatResponse {
+  enabled: boolean;
+  reply: string;
+  toolTrace: ToolTraceEntry[];
+  proposedActions: ProposedAction[];
+  model: string;
+}
+
+export const copilotApi = {
+  chat: (messages: CopilotMessage[]) =>
+    api.post<CopilotChatResponse>('/copilot/chat', { messages }),
+  // Execute a confirm-gated proposal against its real (guarded) endpoint.
+  runAction: (action: ProposedAction) =>
+    api.request({ method: action.method, url: action.path, data: action.body ?? {} }),
+};
