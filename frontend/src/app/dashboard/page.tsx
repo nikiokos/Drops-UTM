@@ -11,6 +11,9 @@ import { formatDate } from '@/lib/utils';
 import { getTelemetrySimulator } from '@/lib/telemetry-simulator';
 import { useTelemetryStore } from '@/store/telemetry.store';
 import { useConflictDetection } from '@/hooks/use-conflict-detection';
+import { ForesightControls } from '@/components/foresight/foresight-controls';
+import { ForesightLayer } from '@/components/foresight/foresight-layer';
+import { useForesightStore } from '@/store/foresight.store';
 import type { MarkerData, PolylineData, PolygonData, CircleData, DroneMarkerData, AircraftMarkerData, WmsLayerData, OverlayTileData } from '@/components/shared/map-view';
 import type { LucideIcon } from 'lucide-react';
 
@@ -148,6 +151,7 @@ export default function DashboardPage() {
   // Telemetry store for live drone positions
   const telemetryDrones = useTelemetryStore((state) => state.drones);
   const simulatorRef = useRef(getTelemetrySimulator());
+  const { engaged: foresightEngaged, timeline: foresightTimeline, playheadSec: foresightPlayheadSec, focusConflict: foresightFocusConflict } = useForesightStore();
 
   const hubMarkers: MarkerData[] = hubList
     .filter((h: Record<string, unknown>) => {
@@ -502,26 +506,39 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {hubMarkers.length > 0 ? (
-            <MapView
-              markers={hubMarkers}
-              polylines={[...flightPolylines, ...conflictPolylines]}
-              polygons={airspacePolygons}
-              circles={conflictCircles}
-              droneMarkers={droneMarkers}
-              aircraftMarkers={aircraftMarkers}
-              wmsLayers={wmsLayers}
-              overlayTiles={overlayTiles}
-              center={
-                hubMarkers.length > 1
-                  ? [
-                      hubMarkers.reduce((sum, m) => sum + m.position[0], 0) / hubMarkers.length,
-                      hubMarkers.reduce((sum, m) => sum + m.position[1], 0) / hubMarkers.length,
-                    ] as [number, number]
-                  : hubMarkers[0]?.position
-              }
-              zoom={hubMarkers.length > 1 ? 6 : 10}
-              className="h-[380px] rounded overflow-hidden"
-            />
+            <div className="relative">
+              <MapView
+                markers={hubMarkers}
+                polylines={[...flightPolylines, ...conflictPolylines]}
+                polygons={airspacePolygons}
+                circles={conflictCircles}
+                droneMarkers={droneMarkers}
+                aircraftMarkers={aircraftMarkers}
+                wmsLayers={wmsLayers}
+                overlayTiles={overlayTiles}
+                center={
+                  hubMarkers.length > 1
+                    ? [
+                        hubMarkers.reduce((sum, m) => sum + m.position[0], 0) / hubMarkers.length,
+                        hubMarkers.reduce((sum, m) => sum + m.position[1], 0) / hubMarkers.length,
+                      ] as [number, number]
+                    : hubMarkers[0]?.position
+                }
+                zoom={hubMarkers.length > 1 ? 6 : 10}
+                className="h-[380px] rounded overflow-hidden"
+              >
+                {foresightEngaged && foresightTimeline && (
+                  <ForesightLayer
+                    timeline={foresightTimeline}
+                    playheadSec={foresightPlayheadSec}
+                    focusConflict={foresightFocusConflict}
+                  />
+                )}
+              </MapView>
+              <div className="absolute left-3 top-3 z-[1000]">
+                <ForesightControls />
+              </div>
+            </div>
           ) : (
             <div className="h-[380px] rounded border border-dashed border-border flex flex-col items-center justify-center">
               <div className="text-muted-foreground/30 mb-2">
