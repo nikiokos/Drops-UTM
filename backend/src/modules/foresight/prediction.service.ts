@@ -51,16 +51,14 @@ export class PredictionService {
     const objects = input.map((o) => this.applyManeuver(o, maneuvers));
     const steps = Math.floor(horizonSec / stepSec);
 
+    // Per-step advanced snapshots, starting from t=0.
+    let current = objects.map((o) => ({ ...o }));
     const frames = [] as ForesightTimeline['frames'];
     // Track the minimum separation per object pair across the horizon.
     const best = new Map<string, { sepM: number; tSec: number; lat: number; lon: number; altM: number }>();
 
     for (let i = 0; i <= steps; i++) {
       const tSec = i * stepSec;
-      // Compute positions from seed at each step (avoids cumulative great-circle drift and
-      // correctly handles hold maneuvers: object frozen during hold, then resumes at its
-      // natural trajectory position at T so it re-enters behind where A has passed).
-      const current = objects.map((o) => this.positionAt(o, tSec, maneuvers));
 
       frames.push({
         tOffsetSec: tSec,
@@ -88,6 +86,9 @@ export class PredictionService {
           }
         }
       }
+
+      // Advance, honoring holds (object stays put until its delay elapses).
+      current = current.map((o) => this.advanceWithHold(o, tSec, stepSec, maneuvers));
     }
 
     const byId = new Map(objects.map((o) => [o.id, o]));
@@ -134,22 +135,20 @@ export class PredictionService {
     return out;
   }
 
-  /**
-   * Object position at absolute simulation time T.
-   *
-   * Hold semantics: the object freezes at its initial position until delaySec elapses,
-   * then re-enters the simulation at its *natural* T-position (advance(seed, T)).
-   * This means the conflicting aircraft has already passed the meeting point during the
-   * hold window, so the pair diverges after the hold ends — clearing the conflict.
-   */
-  private positionAt(o: ForesightObject, tSec: number, maneuvers: ResolutionManeuver[]): ForesightObject {
+  /** Advance one object by stepSec, but keep it stationary while inside an active hold window. */
+  private advanceWithHold(
+    o: ForesightObject,
+    tSec: number,
+    stepSec: number,
+    maneuvers: ResolutionManeuver[],
+  ): ForesightObject {
     const hold = maneuvers.find(
       (m) => m.objectId === o.id && m.kind === 'hold' && m.delaySec != null,
     );
     if (hold && tSec < (hold.delaySec as number)) {
-      return { ...o }; // frozen at initial position during hold
+      return { ...o }; // still holding — no movement this step
     }
-    return advance(o, tSec); // natural trajectory position at time T
+    return advance(o, stepSec);
   }
 
   /** Build the live now-state object list from telemetry, ADS-B and the demo scenario. */

@@ -52,12 +52,29 @@ describe('PredictionService.predictFromObjects', () => {
   });
 
   it('applies a hold maneuver (object waits, then resumes)', () => {
-    // Holding B long enough that A passes first should clear the head-on.
-    const cleared = svc.predictFromObjects(headOn(), { horizonSec: 900, stepSec: 5 }, [
-      { objectId: 'b', kind: 'hold', delaySec: 600 },
+    // Perpendicular crossing geometry: A heads east (90°), B heads north (0°).
+    // They are positioned to arrive at crossing point ~(36.40, 28.10) at nearly the same time
+    // (~133-134 s), so without a hold they conflict.
+    //
+    // A: (36.40, 28.07) → east at 20 m/s → ~2677 m to crossing → arrives ~134 s
+    // B: (36.376, 28.10) → north at 20 m/s → ~2664 m to crossing → arrives ~133 s
+    //
+    // Hold A for 120 s → A crosses at ~254 s; by then B is ~2420 m north → no conflict.
+    const crossing: ForesightObject[] = [
+      { id: 'a', kind: 'demo', label: 'A', lat: 36.40, lon: 28.07, altitudeM: 120, headingDeg: 90, speedMps: 20, verticalSpeedMps: 0 },
+      { id: 'b', kind: 'demo', label: 'B', lat: 36.376, lon: 28.10, altitudeM: 120, headingDeg: 0, speedMps: 20, verticalSpeedMps: 0 },
+    ];
+
+    // 1) Without hold: conflict must exist (proves the geometry is set up correctly).
+    const unmanoeuvred = svc.predictFromObjects(crossing, { horizonSec: 600, stepSec: 5 });
+    expect(unmanoeuvred.predictedConflicts.length).toBeGreaterThanOrEqual(1);
+
+    // 2) With a 120 s hold on A: A resumes from its frozen position after B has cleared
+    //    the crossing → no conflict within the horizon.
+    const held = svc.predictFromObjects(crossing, { horizonSec: 600, stepSec: 5 }, [
+      { objectId: 'a', kind: 'hold', delaySec: 120 },
     ]);
-    // With a 600s hold, B barely moves while A passes its start latitude → min sep grows.
-    const c = cleared.predictedConflicts[0];
+    const c = held.predictedConflicts[0];
     expect(c === undefined || c.minSeparationM >= 150).toBe(true);
   });
 });
