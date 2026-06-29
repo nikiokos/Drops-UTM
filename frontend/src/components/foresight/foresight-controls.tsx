@@ -39,12 +39,23 @@ export function ForesightControls() {
     };
   }, [engaged, resolved, set]);
 
+  // Request Director advice once per conflict. The 3s poll hands us a fresh
+  // focusConflict OBJECT every tick, so we key this effect on the conflict's stable
+  // id STRING — it stays constant while the same conflict persists, so the effect
+  // does NOT re-run each poll (which would both pile up concurrent ~18s AI calls and
+  // invalidate the in-flight call's `alive` flag before it resolves).
+  const conflictId = focusConflict?.id ?? null;
   useEffect(() => {
-    if (!focusConflict || advice) return;
+    if (!conflictId || advice) return;
+    const conflict = useForesightStore.getState().focusConflict;
+    if (!conflict) return;
     let alive = true;
-    foresightApi.advise(focusConflict).then(({ data }) => { if (alive) set({ advice: data }); }).catch(() => {});
+    foresightApi
+      .advise(conflict)
+      .then(({ data }) => { if (alive) set({ advice: data }); })
+      .catch(() => {});
     return () => { alive = false; };
-  }, [focusConflict, advice, set]);
+  }, [conflictId, advice, set]);
 
   const matchOptionIndex = (t: string): number | null => {
     if (/\b(1|one|ένα|ενα|first|πρώτο|πρωτο)\b/.test(t)) return 0;
