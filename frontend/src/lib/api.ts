@@ -1053,3 +1053,72 @@ export const copilotApi = {
   runAction: (action: ProposedAction) =>
     api.request({ method: action.method, url: action.path, data: action.body ?? {} }),
 };
+
+// ── Foresight Mode (predictive look-ahead) ──
+export interface ForesightObject {
+  id: string;
+  kind: 'drone' | 'manned' | 'demo';
+  label: string;
+  lat: number;
+  lon: number;
+  altitudeM: number;
+  headingDeg: number;
+  speedMps: number;
+  verticalSpeedMps: number;
+}
+export interface ForesightFrame {
+  tOffsetSec: number;
+  objects: Array<{ id: string; lat: number; lon: number; altitudeM: number }>;
+}
+export interface PredictedConflict {
+  id: string;
+  timeToConflictSec: number;
+  minSeparationM: number;
+  location: { lat: number; lon: number };
+  altitudeM: number;
+  primary: { id: string; label: string };
+  secondary: { id: string; label: string };
+}
+export interface ResolutionManeuver {
+  objectId: string;
+  kind: 'hold' | 'altitude' | 'lateral';
+  delaySec?: number;
+  altitudeDeltaM?: number;
+  lateralOffsetM?: number;
+}
+export interface ForesightTimeline {
+  generatedAt: string;
+  horizonSec: number;
+  stepSec: number;
+  objects: ForesightObject[];
+  frames: ForesightFrame[];
+  predictedConflicts: PredictedConflict[];
+}
+export interface DirectorOption {
+  kind: 'hold' | 'altitude' | 'lateral';
+  label: string;
+  delaySec?: number;
+  altitudeDeltaM?: number;
+  lateralOffsetM?: number;
+  objectId: string;
+  rationale: string;
+  sideEffects: string;
+}
+export interface DirectorAdvice {
+  summary: string;
+  cause: string;
+  options: DirectorOption[];
+  recommendedIndex: number;
+  source: 'ai' | 'deterministic';
+}
+
+export const foresightApi = {
+  predict: (horizon = 600, step = 5) =>
+    api.get<ForesightTimeline>('/foresight/predict', { params: { horizon, step } }),
+  simulateResolution: (maneuvers: ResolutionManeuver[], horizon = 600, step = 5) =>
+    api.post<ForesightTimeline>('/foresight/simulate-resolution', { maneuvers, horizon, step }),
+  advise: (conflict: PredictedConflict) =>
+    api.post<DirectorAdvice>('/foresight/advise', { conflict }),
+  startDemo: () => api.post<{ active: boolean }>('/foresight/demo/start'),
+  resetDemo: () => api.post<{ active: boolean }>('/foresight/demo/reset'),
+};
