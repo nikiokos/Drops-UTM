@@ -76,4 +76,19 @@ describe('PredictionService.predictFromObjects', () => {
     ]);
     expect(held.predictedConflicts.length).toBe(0);
   });
+
+  it('clamps an abusive horizon/step to bounded frame counts (DoS guard)', () => {
+    // horizon=10_000_000 with step=0.001 would be ~10^10 frames if unbounded.
+    const t = svc.predictFromObjects(headOn(), { horizonSec: 10_000_000, stepSec: 0.001 });
+    // step clamps to >= 1s, horizon clamps to <= 1800s → at most 1801 frames.
+    expect(t.frames.length).toBeLessThanOrEqual(1801);
+    expect(t.horizonSec).toBeLessThanOrEqual(1800);
+    expect(t.stepSec).toBeGreaterThanOrEqual(1);
+  });
+
+  it('falls back to defaults when horizon/step are NaN', () => {
+    const t = svc.predictFromObjects(headOn(), { horizonSec: NaN, stepSec: NaN });
+    expect(t.horizonSec).toBe(600);
+    expect(t.stepSec).toBe(5);
+  });
 });

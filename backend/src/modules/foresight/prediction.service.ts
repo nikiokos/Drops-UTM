@@ -17,6 +17,20 @@ const FT_TO_M = 0.3048;
 const HORIZ_THRESHOLD_M = 150;
 const VERT_THRESHOLD_M = 30;
 
+// Bounds on client-supplied prediction parameters. The loop is O((horizon/step) × N²),
+// so unbounded horizon / tiny step is a denial-of-service vector — clamp both, and
+// guard against NaN from bad query parsing.
+const MAX_HORIZON_SEC = 1800; // 30 min look-ahead ceiling
+const MIN_STEP_SEC = 1;
+const MAX_STEP_SEC = 60;
+const MAX_MANEUVERS = 16;
+
+/** Clamp to [min, max], falling back to `fallback` for NaN/non-finite input. */
+function clamp(value: number | undefined, min: number, max: number, fallback: number): number {
+  if (value == null || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
 interface PredictOpts {
   horizonSec?: number;
   stepSec?: number;
@@ -46,9 +60,10 @@ export class PredictionService {
     opts: PredictOpts = {},
     maneuvers: ResolutionManeuver[] = [],
   ): ForesightTimeline {
-    const horizonSec = opts.horizonSec ?? 600;
-    const stepSec = opts.stepSec ?? 5;
-    const objects = input.map((o) => this.applyManeuver(o, maneuvers));
+    const stepSec = clamp(opts.stepSec, MIN_STEP_SEC, MAX_STEP_SEC, 5);
+    const horizonSec = clamp(opts.horizonSec, stepSec, MAX_HORIZON_SEC, 600);
+    const safeManeuvers = maneuvers.slice(0, MAX_MANEUVERS);
+    const objects = input.map((o) => this.applyManeuver(o, safeManeuvers));
     const steps = Math.floor(horizonSec / stepSec);
 
     // Per-step advanced snapshots, starting from t=0.
@@ -88,7 +103,7 @@ export class PredictionService {
       }
 
       // Advance, honoring holds (object stays put until its delay elapses).
-      current = current.map((o) => this.advanceWithHold(o, tSec, stepSec, maneuvers));
+      current = current.map((o) => this.advanceWithHold(o, tSec, stepSec, safeManeuvers));
     }
 
     const byId = new Map(objects.map((o) => [o.id, o]));
