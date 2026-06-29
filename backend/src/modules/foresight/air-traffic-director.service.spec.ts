@@ -59,4 +59,26 @@ describe('AirTrafficDirectorService', () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.properties.options.items.additionalProperties).toBe(false);
   });
+
+  it('clamps an out-of-range AI recommendedIndex into the options range', async () => {
+    const aiAdvice = {
+      summary: 's', cause: 'c', recommendedIndex: 7, // out of range
+      options: [
+        { kind: 'hold', label: 'a', objectId: 'x', rationale: 'r', sideEffects: 'e' },
+        { kind: 'altitude', label: 'b', objectId: 'y', rationale: 'r', sideEffects: 'e' },
+      ],
+    };
+    const claude = { hasKey: () => true, messageJson: jest.fn().mockResolvedValue(aiAdvice) } as unknown as ClaudeService;
+    const advice = await new AirTrafficDirectorService(claude).advise(conflict);
+    expect(advice.source).toBe('ai');
+    expect(advice.recommendedIndex).toBe(1); // clamped to options.length - 1
+  });
+
+  it('returns an empty deterministic advice (no throw) for a malformed conflict', async () => {
+    const claude = { hasKey: () => true, messageJson: jest.fn() } as unknown as ClaudeService;
+    const advice = await new AirTrafficDirectorService(claude).advise({} as never);
+    expect(advice.source).toBe('deterministic');
+    expect(advice.options).toEqual([]);
+    expect(claude.messageJson).not.toHaveBeenCalled();
+  });
 });

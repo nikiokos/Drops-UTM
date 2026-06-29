@@ -39,6 +39,17 @@ export class AirTrafficDirectorService {
   constructor(private readonly claude: ClaudeService) {}
 
   async advise(conflict: PredictedConflict): Promise<DirectorAdvice> {
+    // Guard against a malformed/missing conflict body so the endpoint returns a
+    // clean response instead of dereferencing undefined geometry and 500-ing.
+    if (!conflict || !conflict.location || conflict.primary == null || conflict.secondary == null) {
+      return {
+        summary: 'No valid predicted conflict was provided.',
+        cause: 'The request did not include a conflict to assess.',
+        options: [],
+        recommendedIndex: 0,
+        source: 'deterministic',
+      };
+    }
     if (this.claude.hasKey()) {
       const ai = await this.claude.messageJson<Omit<DirectorAdvice, 'source'>>({
         system:
@@ -52,7 +63,13 @@ export class AirTrafficDirectorService {
         maxTokens: 1200,
       });
       if (ai && Array.isArray(ai.options) && ai.options.length > 0) {
-        return { ...ai, source: 'ai' };
+        // Clamp the AI's recommendedIndex into range — an out-of-range value would
+        // silently break the voice "do it" path (which selects options[recommendedIndex]).
+        const recommendedIndex = Math.min(
+          Math.max(0, Math.floor(ai.recommendedIndex ?? 0)),
+          ai.options.length - 1,
+        );
+        return { ...ai, recommendedIndex, source: 'ai' };
       }
     }
     return this.deterministic(conflict);
@@ -92,7 +109,7 @@ export class AirTrafficDirectorService {
       },
       {
         kind: 'lateral',
-        label: `Offset ${c.secondary.label} 1km west`,
+        label: `Offset ${c.secondary.label} 1km laterally`,
         lateralOffsetM: 1000,
         objectId: c.secondary.id,
         rationale: `A 1km lateral offset opens horizontal separation well beyond 150m.`,

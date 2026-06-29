@@ -17,12 +17,19 @@ const colorFor = (id: string, kind?: string) =>
 export function ForesightLayer({ timeline, playheadSec, focusConflict }: Props) {
   const map = useMap();
 
-  // Cinematic camera fly-to when a conflict becomes the focus.
+  // Cinematic camera fly-to when a conflict becomes the focus. Keyed on the
+  // conflict id (a stable string), NOT the focusConflict object — the 3s poll
+  // hands a fresh object every tick, which would otherwise re-fly the camera every
+  // poll and fight the operator's pan/zoom for the whole pre-resolution window.
+  const focusId = focusConflict?.id ?? null;
+  const focusLat = focusConflict?.location.lat;
+  const focusLon = focusConflict?.location.lon;
   useEffect(() => {
-    if (focusConflict) {
-      map.flyTo([focusConflict.location.lat, focusConflict.location.lon], 11, { duration: 1.5 });
+    if (focusId != null && focusLat != null && focusLon != null) {
+      map.flyTo([focusLat, focusLon], 11, { duration: 1.5 });
     }
-  }, [focusConflict, map]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, map]);
 
   const framesUpTo = timeline.frames.filter((f) => f.tOffsetSec <= playheadSec);
   const kindById = new Map(timeline.objects.map((o) => [o.id, o.kind]));
