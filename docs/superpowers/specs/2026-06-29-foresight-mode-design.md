@@ -14,9 +14,8 @@ all dramatized cinematically on the live tactical map.
 
 It is built primarily as an investor/demo hero feature, but on honest foundations:
 real conflict-geometry math, the real Claude agent, and a **scripted-but-real**
-scenario driven by the existing simulation engine over live ADS-B / weather
-background. Nothing is faked; the conflict is simply staged so it is guaranteed to
-occur on cue.
+scenario from a lightweight in-memory provider over live ADS-B / weather background.
+Nothing is faked; the conflict is simply staged so it is guaranteed to occur on cue.
 
 ## Goals
 
@@ -50,7 +49,7 @@ occur on cue.
 | Decision | Choice |
 |---|---|
 | Hero feature | **Foresight Mode** (predict → advise → voice-confirm → resolve) |
-| Demo data | **Scripted-but-real** via the existing simulation engine over live background |
+| Demo data | **Scripted-but-real**: a Foresight-owned in-memory scripted scenario provider (2 deterministic drones) over live ADS-B/weather background. *(The simulation engine emits only over WebSocket and never persists telemetry by flightId, so it cannot feed `telemetry.getLatest()`; a lightweight provider is deterministic and demo-safe.)* |
 | Module boundary | **New `foresight/` module** (clean single purpose), persists nothing new |
 | Resolution model | **Prediction-level preview** (deterministic, demo-safe); optional sim maneuver as stretch |
 | Voice | **Real browser voice** (Web Speech API), with a text-submit fallback path retained |
@@ -76,18 +75,20 @@ Tactical map (Leaflet)  ──GET /foresight/predict──▶  PredictionService
 
 ### Backend — new `modules/foresight/`
 
-Reuses (does not duplicate): `PhysicsModelService` (Haversine distance, bearing,
-`movePosition`), `TelemetryService.getLatest()`, `AdsbService.getAircraft()`,
-`FlightsService`, `ClaudeService`, `ConflictsService` (unchanged), the simulation
-engine (for the demo scenario).
+Reuses (does not duplicate): `TelemetryService.getLatest()`, `AdsbService.getAircraft()`,
+`FlightsService`, `ClaudeService`, `ConflictsService` (unchanged). Foresight owns a
+small self-contained `geo` util (haversine + forward-projection) rather than reaching
+into the simulation's private geometry methods.
 
 **`PredictionService`** — the core look-ahead engine.
-- Gather now-state: for each active flight, `telemetry.getLatest(flightId)` → position
-  + velocity; for manned traffic, `adsb.getAircraft()`.
+- Gather now-state from three sources: (a) each active flight via
+  `telemetry.getLatest(flightId)` → position + velocity; (b) manned traffic via
+  `adsb.getAircraft()`; (c) any active demo-scenario objects from
+  `DemoScenarioService`.
 - Normalize all speeds to **m/s** and altitudes to **meters** at ingest. ADS-B is
   knots + ft/min; mission waypoint speed is km/h; telemetry speed is assumed m/s and
-  confirmed against the simulation engine's emitted telemetry during step 1 of the
-  build sequence.
+  confirmed against a sample telemetry row during step 1 of the build sequence. The
+  demo-scenario objects are authored directly in m/s and meters.
 - Propagate each object forward over a horizon (default 600 s, step 5 s) by
   dead-reckoning with `PhysicsModelService.movePosition`. Straight-line v1.
 - Compute pairwise **closest point of approach (CPA)** across timesteps. A predicted
@@ -111,17 +112,25 @@ engine (for the demo scenario).
 **Resolution (preview)** — `simulate-resolution` applies the chosen maneuver to the
 prediction inputs (hold N s / altitude delta / lateral offset on the named object) and
 **re-runs prediction**. The conflict clears in the recomputed timeline. This mutates
-nothing permanent. *(Stretch: also push the maneuver into the simulation engine so the
-live sim drone visibly moves.)*
+nothing permanent. *(Stretch: also apply the maneuver to the live demo-scenario object
+so the demo drone visibly diverges on the map, not just in the prediction.)*
 
 **Endpoints** (all read-only / preview; none touch real flights or write-endpoints):
 - `GET /foresight/predict?horizon=600&step=5` → `{ timeline, predictedConflicts, generatedAt }`
 - `POST /foresight/advise` — body `{ conflict }` → Director options + reasoning
 - `POST /foresight/simulate-resolution` — body `{ maneuver }` → re-predicted timeline
-- `POST /foresight/demo/start` — start the scripted sim scenario; `POST /foresight/demo/reset`
+- `POST /foresight/demo/start` — activate the scripted scenario provider;
+  `POST /foresight/demo/reset` — clear it
 
-`foresight.module.ts` imports: SimulationModule, TelemetryModule, AdsbModule,
-FlightsModule, MissionsModule, AiModule, ConflictsModule, NotamModule, AirspaceModule.
+**`DemoScenarioService`** — holds the active scripted scenario in memory: two drone
+objects with start position / heading / speed / vertical rate chosen so their
+straight-line propagation produces a predicted conflict (~140 m) near Rhodes at
+~T+6 min. `start()` stamps a wall-clock activation time; `getObjects()` returns the two
+objects advanced to *now* (so they actually move on the map between requests);
+`reset()` clears it. No DB, no sessions.
+
+`foresight.module.ts` imports: TelemetryModule, AdsbModule, FlightsModule, AiModule,
+ConflictsModule, NotamModule, AirspaceModule.
 
 ### Frontend — Foresight layer on the tactical map
 
