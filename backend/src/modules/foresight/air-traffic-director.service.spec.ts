@@ -48,4 +48,15 @@ describe('AirTrafficDirectorService', () => {
     expect(advice.summary).toContain('6:20');
     expect(advice.options[0].altitudeDeltaM).toBe(-60);
   });
+
+  it('sends a schema with additionalProperties:false on every object (Anthropic requirement)', async () => {
+    const messageJson = jest.fn().mockResolvedValue(null);
+    const claude = { hasKey: () => true, messageJson } as unknown as ClaudeService;
+    await new AirTrafficDirectorService(claude).advise(conflict);
+    const schema = messageJson.mock.calls[0][0].schema;
+    // The Anthropic structured-output API rejects object schemas that omit this,
+    // which silently forces the deterministic fallback.
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.properties.options.items.additionalProperties).toBe(false);
+  });
 });

@@ -2,8 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { ClaudeService } from '../ai/claude.service';
 import type { DirectorAdvice, DirectorOption, PredictedConflict } from './foresight.types';
 
+// Anthropic structured-output (output_config.format) requires every object schema
+// to set additionalProperties:false explicitly, else the API returns HTTP 400 and
+// the Director silently falls back to deterministic options.
 const ADVICE_SCHEMA = {
   type: 'object',
+  additionalProperties: false,
   required: ['summary', 'cause', 'options', 'recommendedIndex'],
   properties: {
     summary: { type: 'string' },
@@ -13,6 +17,7 @@ const ADVICE_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         required: ['kind', 'label', 'objectId', 'rationale', 'sideEffects'],
         properties: {
           kind: { type: 'string', enum: ['hold', 'altitude', 'lateral'] },

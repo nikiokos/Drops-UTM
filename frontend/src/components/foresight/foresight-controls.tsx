@@ -13,9 +13,12 @@ export function ForesightControls() {
   const advice = useForesightStore((s) => s.advice);
   const resolved = useForesightStore((s) => s.resolved);
 
-  // Poll predictions while engaged (every 3s, matching ADS-B cadence).
+  // Poll predictions while engaged (every 3s, matching ADS-B cadence). Once a
+  // conflict is resolved we stop polling: the re-predicted (maneuvered) timeline is
+  // frozen so the cleared airspace stays on screen — otherwise the unmaneuvered poll
+  // would re-detect the original conflict and flicker the red pulse back.
   useEffect(() => {
-    if (!engaged) return;
+    if (!engaged || resolved) return;
     let alive = true;
     const tick = async () => {
       try {
@@ -33,7 +36,7 @@ export function ForesightControls() {
       alive = false;
       clearInterval(h);
     };
-  }, [engaged, set]);
+  }, [engaged, resolved, set]);
 
   useEffect(() => {
     if (!focusConflict || advice) return;
