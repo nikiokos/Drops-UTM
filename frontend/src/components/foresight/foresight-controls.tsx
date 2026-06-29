@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Eye, Play, RotateCcw } from 'lucide-react';
+import { Eye, Mic, Play, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { foresightApi } from '@/lib/api';
 import { useForesightStore } from '@/store/foresight.store';
 import { AirTrafficDirectorPanel } from './air-traffic-director-panel';
+import { useVoiceCommand } from '@/hooks/use-voice-command';
 
 export function ForesightControls() {
   const { engaged, timeline, playheadSec, focusConflict, set, reset } = useForesightStore();
@@ -45,6 +46,27 @@ export function ForesightControls() {
     return () => { alive = false; };
   }, [focusConflict, advice, set]);
 
+  const matchOptionIndex = (t: string): number | null => {
+    if (/\b(1|one|ένα|ενα|first|πρώτο|πρωτο)\b/.test(t)) return 0;
+    if (/\b(2|two|δύο|δυο|second|δεύτερο|δευτερο)\b/.test(t)) return 1;
+    if (/\b(3|three|τρία|τρια|third|τρίτο|τριτο)\b/.test(t)) return 2;
+    return null;
+  };
+
+  const onVoice = (transcript: string) => {
+    const a = useForesightStore.getState().advice;
+    if (!a) return;
+    let idx = matchOptionIndex(transcript);
+    // "do it" / "κάν' το" with no number → the recommended option.
+    if (idx === null && /(do it|execute|κάν|καν|προχώρα|προχωρα)/.test(transcript)) idx = a.recommendedIndex;
+    if (idx === null || !a.options[idx]) return;
+    const opt = a.options[idx];
+    foresightApi.simulateResolution([{ objectId: opt.objectId, kind: opt.kind, delaySec: opt.delaySec, altitudeDeltaM: opt.altitudeDeltaM, lateralOffsetM: opt.lateralOffsetM }], 600, 5)
+      .then(({ data }) => set({ timeline: data, focusConflict: data.predictedConflicts[0] ?? null, resolved: data.predictedConflicts.length === 0 }));
+  };
+
+  const { listening, supported, start } = useVoiceCommand({ onCommand: onVoice });
+
   const runDemo = async () => {
     await foresightApi.startDemo();
     set({ engaged: true, resolved: false, playheadSec: 480 });
@@ -72,6 +94,11 @@ export function ForesightControls() {
         <Button size="sm" variant="ghost" className="gap-1.5" onClick={stop}>
           <RotateCcw className="h-3.5 w-3.5" /> Reset
         </Button>
+        {supported && (
+          <Button size="sm" variant={listening ? 'default' : 'outline'} className="gap-1.5" onClick={start}>
+            <Mic className="h-3.5 w-3.5" /> {listening ? 'Listening…' : 'Voice'}
+          </Button>
+        )}
       </div>
 
       {engaged && timeline && (
