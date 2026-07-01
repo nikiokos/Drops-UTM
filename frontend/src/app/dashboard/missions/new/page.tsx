@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMissionsStore, Waypoint } from '@/store/missions.store';
-import { hubsApi, dronesApi } from '@/lib/api';
+import { hubsApi, dronesApi, type FeasibilityResult } from '@/lib/api';
+import { FeasibilityCard } from '@/components/feasibility/feasibility-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +54,18 @@ type LocalWaypoint = Omit<Waypoint, 'id' | 'missionId' | 'createdAt' | 'updatedA
   tempId: string;
 };
 
+/** Haversine distance in metres between two lat/lon points. */
+function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function NewMissionPage() {
   const router = useRouter();
   const { createMission, addWaypoint, isLoading } = useMissionsStore();
@@ -72,6 +85,28 @@ export default function NewMissionPage() {
   const [selectedWaypointId, setSelectedWaypointId] = useState<string | null>(null);
   const [editorMode, setEditorMode] = useState<EditorMode>('add');
   const [defaultAltitude, setDefaultAltitude] = useState(50);
+  const [feasibility, setFeasibility] = useState<FeasibilityResult | null>(null);
+
+  /** Sum of great-circle leg distances across all waypoints (metres). */
+  const distanceM = useMemo(() => {
+    if (waypoints.length < 2) return 0;
+    let total = 0;
+    for (let i = 1; i < waypoints.length; i++) {
+      total += haversineM(
+        waypoints[i - 1].latitude,
+        waypoints[i - 1].longitude,
+        waypoints[i].latitude,
+        waypoints[i].longitude,
+      );
+    }
+    return Math.round(total);
+  }, [waypoints]);
+
+  /** Sum of per-waypoint hover durations (seconds). Waypoints without hoverDuration contribute 0. */
+  const hoverTimeS = useMemo(
+    () => waypoints.reduce((sum, wp) => sum + (wp.hoverDuration ?? 0), 0),
+    [waypoints],
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -166,6 +201,16 @@ export default function NewMissionPage() {
   const handleSave = async () => {
     if (!name || !departureHubId) return;
 
+    // NO_GO override gate — operator must supply a written justification.
+    let overrideReason: string | undefined;
+    if (feasibility?.verdict === 'NO_GO') {
+      const reason = window.prompt(
+        'Feasibility check is NO-GO for this drone/mission.\nType a justification to override, or Cancel:',
+      );
+      if (!reason) return; // Operator cancelled — do NOT create the mission.
+      overrideReason = reason;
+    }
+
     const mission = await createMission({
       name,
       description: description || undefined,
@@ -175,6 +220,9 @@ export default function NewMissionPage() {
       scheduleType,
       scheduledAt: scheduledAt?.toISOString(),
       triggerConditions: triggerConditions.length > 0 ? { conditions: triggerConditions } : undefined,
+      ...(overrideReason
+        ? { feasibilityOverride: { reason: overrideReason, verdict: 'NO_GO', at: new Date().toISOString() } }
+        : {}),
     });
 
     if (mission) {
@@ -399,6 +447,17 @@ export default function NewMissionPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block">Mission Feasibility</Label>
+                <FeasibilityCard
+                  droneId={droneId || undefined}
+                  distanceM={distanceM}
+                  hoverTimeS={hoverTimeS}
+                  departureHubId={departureHubId || undefined}
+                  onVerdict={setFeasibility}
+                />
               </div>
             </TabsContent>
 

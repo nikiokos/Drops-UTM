@@ -196,6 +196,8 @@ export interface CreateMissionDto {
   scheduledAt?: string;
   triggerConditions?: Record<string, unknown>;
   waypoints?: CreateWaypointDto[];
+  /** Operator-provided justification when overriding a NO_GO feasibility verdict. */
+  feasibilityOverride?: { reason: string; verdict: string; at: string };
 }
 
 export interface UpdateMissionDto extends Partial<CreateMissionDto> {
@@ -1153,6 +1155,12 @@ export interface FeasibilityResult {
 }
 
 export const feasibilityApi = {
-  check: (body: { droneId: string; missionId: string; payloadKg?: number }) =>
-    api.post<FeasibilityResult>('/feasibility/check', body),
+  check: (body: {
+    droneId: string;
+    missionId?: string;
+    distanceM?: number;
+    hoverTimeS?: number;
+    departureHubId?: string;
+    payloadKg?: number;
+  }) => api.post<FeasibilityResult>('/feasibility/check', body),
 };
