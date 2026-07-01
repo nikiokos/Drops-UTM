@@ -51,6 +51,12 @@ const defaultForm = {
   serialNumber: '',
   homeHubId: '',
   communicationProtocol: '',
+  batteryCapacityWh: '',
+  hoverPowerW: '',
+  cruisePowerW: '',
+  cruiseSpeedMs: '',
+  batteryHealthPct: '',
+  windToleranceMs: '',
 };
 
 export default function DronesPage() {
@@ -145,6 +151,12 @@ export default function DronesPage() {
       serialNumber: (drone.serialNumber as string) || '',
       homeHubId: (drone.homeHubId as string) || '',
       communicationProtocol: (drone.communicationProtocol as string) || '',
+      batteryCapacityWh: drone.batteryCapacityWh != null ? String(drone.batteryCapacityWh) : '',
+      hoverPowerW: drone.hoverPowerW != null ? String(drone.hoverPowerW) : '',
+      cruisePowerW: drone.cruisePowerW != null ? String(drone.cruisePowerW) : '',
+      cruiseSpeedMs: drone.cruiseSpeedMs != null ? String(drone.cruiseSpeedMs) : '',
+      batteryHealthPct: drone.batteryHealthPct != null ? String(drone.batteryHealthPct) : '',
+      windToleranceMs: drone.windToleranceMs != null ? String(drone.windToleranceMs) : '',
     });
     setDialogOpen(true);
   }
@@ -156,7 +168,15 @@ export default function DronesPage() {
   }
 
   function handleSubmit() {
-    const payload: Record<string, unknown> = { ...form };
+    const payload: Record<string, unknown> = {
+      ...form,
+      batteryCapacityWh: Number(form.batteryCapacityWh) || undefined,
+      hoverPowerW: Number(form.hoverPowerW) || undefined,
+      cruisePowerW: Number(form.cruisePowerW) || undefined,
+      cruiseSpeedMs: Number(form.cruiseSpeedMs) || undefined,
+      batteryHealthPct: Number(form.batteryHealthPct) || undefined,
+      windToleranceMs: Number(form.windToleranceMs) || undefined,
+    };
     if (editingDrone) {
       updateMutation.mutate({ id: editingDrone.id as string, data: payload });
     } else {
@@ -356,6 +376,66 @@ export default function DronesPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <p className="text-base font-medium">Energy &amp; Performance</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Battery capacity (Wh)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 300"
+                    value={form.batteryCapacityWh}
+                    onChange={(e) => setForm({ ...form, batteryCapacityWh: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Hover power (W)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 800"
+                    value={form.hoverPowerW}
+                    onChange={(e) => setForm({ ...form, hoverPowerW: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Cruise power (W)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 500"
+                    value={form.cruisePowerW}
+                    onChange={(e) => setForm({ ...form, cruisePowerW: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Cruise speed (m/s)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 15"
+                    value={form.cruiseSpeedMs}
+                    onChange={(e) => setForm({ ...form, cruiseSpeedMs: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Battery health (%)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 95"
+                    value={form.batteryHealthPct}
+                    onChange={(e) => setForm({ ...form, batteryHealthPct: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Wind tolerance (m/s)</label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 12"
+                    value={form.windToleranceMs}
+                    onChange={(e) => setForm({ ...form, windToleranceMs: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
