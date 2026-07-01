@@ -1122,3 +1122,37 @@ export const foresightApi = {
   startDemo: () => api.post<{ active: boolean }>('/foresight/demo/start'),
   resetDemo: () => api.post<{ active: boolean }>('/foresight/demo/reset'),
 };
+
+// ── Mission Feasibility ──
+export type FeasibilityVerdict = 'GO' | 'MARGINAL' | 'NO_GO';
+
+export interface FeasibilitySolution {
+  kind: 'reduce_payload' | 'charging_stop' | 'other_drone' | 'await_wind';
+  label: string;
+  detail: string;
+}
+
+export interface FeasibilityResult {
+  verdict: FeasibilityVerdict;
+  marginPct: number;
+  usableWh: number;
+  requiredWh: number;
+  breakdown: {
+    cruiseWh: number;
+    hoverWh: number;
+    climbWh: number;
+    payloadFactor: number;
+    windFactor: number;
+  };
+  confidence: 'HIGH' | 'LOW';
+  windExceeded: boolean;
+  solutions: FeasibilitySolution[];
+  windUsed: { speedMs: number; source: string } | null;
+  explanation: string;
+  explanationSource: 'ai' | 'deterministic';
+}
+
+export const feasibilityApi = {
+  check: (body: { droneId: string; missionId: string; payloadKg?: number }) =>
+    api.post<FeasibilityResult>('/feasibility/check', body),
+};
