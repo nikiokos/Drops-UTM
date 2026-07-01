@@ -37,6 +37,7 @@ import { BriefingModule } from './modules/briefing/briefing.module';
 import { NotamModule } from './modules/notam/notam.module';
 import { CopilotModule } from './modules/copilot/copilot.module';
 import { ForesightModule } from './modules/foresight/foresight.module';
+import { FeasibilityModule } from './modules/feasibility/feasibility.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { ForesightModule } from './modules/foresight/foresight.module';
     NotamModule,
     CopilotModule,
     ForesightModule,
+    FeasibilityModule,
   ],
   providers: [
     // Global JWT authentication guard - requires auth for all routes except @Public()
