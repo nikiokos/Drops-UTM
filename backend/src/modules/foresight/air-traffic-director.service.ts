@@ -56,7 +56,14 @@ export class AirTrafficDirectorService {
           'You are the Air Traffic Director for a drone UTM system. Given a predicted ' +
           'conflict, propose exactly 3 ranked, concrete resolution options (hold / altitude / ' +
           'lateral), each grounded in the geometry, with a short rationale citing the numbers ' +
-          'and a one-line side effect. Recommend the option with least operational impact.',
+          'and a one-line side effect. Recommend the option with least operational impact. ' +
+          'CRITICAL: this system flags a conflict whenever horizontal separation is below ' +
+          '150 m AND vertical separation is below 30 m at the closest point of approach. Every ' +
+          'option you propose MUST fully clear the conflict with margin. Sizing guide: altitude ' +
+          'maneuvers need at least a 40 m change; hold maneuvers at least 120 s; lateral ' +
+          'offsets at least 300 m (the drones stay on converging headings, so part of a lateral ' +
+          'offset is eaten back before the closest point of approach). Do not propose a maneuver ' +
+          'that only partially reduces the separation; size each so the conflict is resolved.',
         user: this.prompt(conflict),
         schema: ADVICE_SCHEMA,
         model: ClaudeService.SONNET,
@@ -84,6 +91,9 @@ export class AirTrafficDirectorService {
       `Minimum predicted separation: ${c.minSeparationM} m.`,
       `Location: lat ${c.location.lat.toFixed(4)}, lon ${c.location.lon.toFixed(4)}, ~${c.altitudeM} m altitude (near Rhodes / LGRP).`,
       `objectId for ${c.primary.label} is "${c.primary.id}", for ${c.secondary.label} is "${c.secondary.id}".`,
+      'Conflict thresholds: horizontal < 150 m AND vertical < 30 m. Size each maneuver to',
+      'clear with margin: altitude ≥ 40 m change, hold ≥ 120 s, lateral ≥ 300 m offset.',
+      'A 25 m altitude change or a small (<300 m) offset is NOT enough.',
       'Propose 3 options; set objectId to the drone the maneuver applies to.',
     ].join('\n');
   }

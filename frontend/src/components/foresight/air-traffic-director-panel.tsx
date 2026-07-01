@@ -10,9 +10,11 @@ import { useForesightStore } from '@/store/foresight.store';
 export function AirTrafficDirectorPanel({ advice }: { advice: DirectorAdvice }) {
   const { set } = useForesightStore();
   const [applying, setApplying] = useState<number | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   const confirm = async (opt: DirectorOption, idx: number) => {
     setApplying(idx);
+    setNote(null);
     try {
       const maneuver: ResolutionManeuver = {
         objectId: opt.objectId,
@@ -24,6 +26,16 @@ export function AirTrafficDirectorPanel({ advice }: { advice: DirectorAdvice }) 
       const { data } = await foresightApi.simulateResolution([maneuver], 600, 5);
       const cleared = data.predictedConflicts.length === 0;
       set({ timeline: data, focusConflict: data.predictedConflicts[0] ?? null, resolved: cleared });
+      // If the maneuver reduced but didn't fully clear the conflict, say so — never
+      // leave the operator staring at an unchanged panel wondering if it worked.
+      if (!cleared) {
+        const sep = data.predictedConflicts[0]?.minSeparationM;
+        setNote(
+          `Maneuver applied, but a conflict remains${sep != null ? ` (separation now ${sep} m)` : ''}. Try another option.`,
+        );
+      }
+    } catch {
+      setNote('Could not apply the maneuver — please try again.');
     } finally {
       setApplying(null);
     }
@@ -56,6 +68,12 @@ export function AirTrafficDirectorPanel({ advice }: { advice: DirectorAdvice }) 
           </div>
         ))}
       </div>
+
+      {note && (
+        <p className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-500">
+          {note}
+        </p>
+      )}
     </div>
   );
 }
