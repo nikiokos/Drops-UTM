@@ -32,11 +32,16 @@ export class FeasibilityService {
 
   async check(input: {
     droneId: string;
-    missionId: string;
+    // Either reference a saved mission…
+    missionId?: string;
+    // …or pass an inline profile (used during one-shot mission creation, before the
+    // mission is persisted). departureHubId lets the inline path still fetch live wind.
+    distanceM?: number;
+    hoverTimeS?: number;
+    departureHubId?: string;
     payloadKg?: number;
   }): Promise<FeasibilityResult> {
     const drone = await this.drones.findById(input.droneId);
-    const mission = await this.missions.findById(input.missionId);
 
     const spec: DroneSpec = {
       batteryCapacityWh: drone.batteryCapacityWh ?? null,
@@ -49,19 +54,33 @@ export class FeasibilityService {
       maxFlightTimeMin: drone.maxFlightTime ?? null,
     };
 
-    const waypoints = (mission.waypoints ?? []) as Array<{ hoverDuration?: number | null }>;
-    const hoverTimeS = waypoints.reduce((sum, w) => sum + (w.hoverDuration ?? 0), 0);
-    const profile: MissionProfile = {
-      distanceM: mission.estimatedDistance ?? 0,
-      hoverTimeS,
-      payloadKg: input.payloadKg ?? 0,
-    };
+    // Build the mission profile from a saved mission, or from inline params.
+    let profile: MissionProfile;
+    let hubForWind: string | undefined;
+    if (input.missionId) {
+      const mission = await this.missions.findById(input.missionId);
+      const waypoints = (mission.waypoints ?? []) as Array<{ hoverDuration?: number | null }>;
+      const hoverTimeS = waypoints.reduce((sum, w) => sum + (w.hoverDuration ?? 0), 0);
+      profile = {
+        distanceM: mission.estimatedDistance ?? 0,
+        hoverTimeS,
+        payloadKg: input.payloadKg ?? 0,
+      };
+      hubForWind = mission.departureHubId;
+    } else {
+      profile = {
+        distanceM: input.distanceM ?? 0,
+        hoverTimeS: input.hoverTimeS ?? 0,
+        payloadKg: input.payloadKg ?? 0,
+      };
+      hubForWind = input.departureHubId;
+    }
 
     // Live wind from the departure hub (best-effort).
     let windSpeedMs: number | null = null;
     try {
-      if (mission.departureHubId) {
-        const w = await this.weather.getGoNoGo(mission.departureHubId);
+      if (hubForWind) {
+        const w = await this.weather.getGoNoGo(hubForWind);
         windSpeedMs = w?.wind?.speedMs ?? null;
       }
     } catch {

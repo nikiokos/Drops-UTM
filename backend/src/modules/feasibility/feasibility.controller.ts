@@ -10,7 +10,17 @@ export class FeasibilityController {
 
   @Post('check')
   @ApiOperation({ summary: 'Predict whether a drone can complete a mission on one charge' })
-  async check(@Body() body: { droneId: string; missionId: string; payloadKg?: number }) {
+  async check(
+    @Body()
+    body: {
+      droneId: string;
+      missionId?: string;
+      distanceM?: number;
+      hoverTimeS?: number;
+      departureHubId?: string;
+      payloadKg?: number;
+    },
+  ) {
     return this.feasibility.check(body);
   }
 }

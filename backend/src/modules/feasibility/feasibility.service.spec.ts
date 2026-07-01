@@ -54,4 +54,21 @@ describe('FeasibilityService.check', () => {
     const heavy = await svc.check({ droneId: 'd1', missionId: 'm1', payloadKg: 5 });
     expect(heavy.requiredWh).toBeGreaterThan(light.requiredWh);
   });
+
+  it('supports an inline profile (no missionId) for one-shot mission creation', async () => {
+    const missionsFindById = jest.fn();
+    const weatherGetGoNoGo = jest.fn().mockResolvedValue({ wind: { speedMs: 2 } });
+    const drones = { findById: jest.fn().mockResolvedValue(drone) } as never;
+    const missions = { findById: missionsFindById } as never;
+    const weather = { getGoNoGo: weatherGetGoNoGo } as never;
+    const claude = { hasKey: () => false, messageJson: jest.fn() } as never;
+    const svc = new FeasibilityService(energy, drones, missions, weather, claude);
+
+    const r = await svc.check({ droneId: 'd1', distanceM: 10000, hoverTimeS: 60, departureHubId: 'h1' });
+
+    expect(missionsFindById).not.toHaveBeenCalled(); // inline path — no mission lookup
+    expect(weatherGetGoNoGo).toHaveBeenCalledWith('h1'); // wind from the given hub
+    expect(['GO', 'MARGINAL', 'NO_GO']).toContain(r.verdict);
+    expect(r.requiredWh).toBeGreaterThan(0);
+  });
 });
