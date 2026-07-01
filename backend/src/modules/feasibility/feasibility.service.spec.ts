@@ -55,6 +55,19 @@ describe('FeasibilityService.check', () => {
     expect(heavy.requiredWh).toBeGreaterThan(light.requiredWh);
   });
 
+  it('clamps NaN/negative inline inputs and still returns a finite requiredWh', async () => {
+    const drones = { findById: jest.fn().mockResolvedValue(drone) } as never;
+    const missions = { findById: jest.fn() } as never;
+    const weather = { getGoNoGo: jest.fn().mockResolvedValue(null) } as never;
+    const claude = { hasKey: () => false, messageJson: jest.fn() } as never;
+    const svc = new FeasibilityService(energy, drones, missions, weather, claude);
+
+    const r = await svc.check({ droneId: 'd1', distanceM: NaN, hoverTimeS: -999, payloadKg: -1 });
+
+    expect(Number.isFinite(r.requiredWh)).toBe(true);
+    expect(r.requiredWh).toBeGreaterThanOrEqual(0);
+  });
+
   it('supports an inline profile (no missionId) for one-shot mission creation', async () => {
     const missionsFindById = jest.fn();
     const weatherGetGoNoGo = jest.fn().mockResolvedValue({ wind: { speedMs: 2 } });

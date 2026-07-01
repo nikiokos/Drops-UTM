@@ -126,7 +126,7 @@ export function FeasibilityCard({
         <span>{result.explanation}</span>
       </p>
       <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-        {result.usableWh} Wh usable · {result.requiredWh} Wh required
+        {Math.round(result.usableWh)} Wh usable · {Math.round(result.requiredWh)} Wh required
         {result.windUsed ? ` · wind ${result.windUsed.speedMs} m/s` : ''}
       </p>
       {result.verdict !== 'GO' && result.solutions.length > 0 && (

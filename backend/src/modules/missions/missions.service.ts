@@ -22,6 +22,7 @@ export interface CreateMissionDto {
   triggerConditions?: TriggerCondition[];
   templateId?: string;
   templateVersion?: number;
+  feasibilityOverride?: { reason: string; verdict: string; at: string };
 }
 
 export interface CreateWaypointDto {

@@ -68,10 +68,14 @@ export class FeasibilityService {
       };
       hubForWind = mission.departureHubId;
     } else {
+      const clampNum = (v: unknown, max: number) => {
+        const n = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+        return Math.min(Math.max(0, n), max);
+      };
       profile = {
-        distanceM: input.distanceM ?? 0,
-        hoverTimeS: input.hoverTimeS ?? 0,
-        payloadKg: input.payloadKg ?? 0,
+        distanceM: clampNum(input.distanceM, 1_000_000),
+        hoverTimeS: clampNum(input.hoverTimeS, 86_400),
+        payloadKg: clampNum(input.payloadKg, 1000),
       };
       hubForWind = input.departureHubId;
     }

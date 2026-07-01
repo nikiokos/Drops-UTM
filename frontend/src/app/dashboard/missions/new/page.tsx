@@ -87,20 +87,37 @@ export default function NewMissionPage() {
   const [defaultAltitude, setDefaultAltitude] = useState(50);
   const [feasibility, setFeasibility] = useState<FeasibilityResult | null>(null);
 
-  /** Sum of great-circle leg distances across all waypoints (metres). */
+  /** Sum of great-circle leg distances across all waypoints (metres).
+   *  Falls back to hub-to-hub distance when fewer than 2 waypoints exist
+   *  but both departure and arrival hubs are selected. */
   const distanceM = useMemo(() => {
-    if (waypoints.length < 2) return 0;
-    let total = 0;
-    for (let i = 1; i < waypoints.length; i++) {
-      total += haversineM(
-        waypoints[i - 1].latitude,
-        waypoints[i - 1].longitude,
-        waypoints[i].latitude,
-        waypoints[i].longitude,
+    if (waypoints.length >= 2) {
+      let total = 0;
+      for (let i = 1; i < waypoints.length; i++) {
+        total += haversineM(
+          waypoints[i - 1].latitude,
+          waypoints[i - 1].longitude,
+          waypoints[i].latitude,
+          waypoints[i].longitude,
+        );
+      }
+      return Math.round(total);
+    }
+    // Hub-to-hub fallback: use hub coordinates when no waypoint route is drawn yet.
+    const depHub = hubs.find((h) => h.id === departureHubId);
+    const arrHub = hubs.find((h) => h.id === arrivalHubId);
+    if (depHub && arrHub) {
+      return Math.round(
+        haversineM(
+          depHub.location.latitude,
+          depHub.location.longitude,
+          arrHub.location.latitude,
+          arrHub.location.longitude,
+        ),
       );
     }
-    return Math.round(total);
-  }, [waypoints]);
+    return 0;
+  }, [waypoints, departureHubId, arrivalHubId, hubs]);
 
   /** Sum of per-waypoint hover durations (seconds). Waypoints without hoverDuration contribute 0. */
   const hoverTimeS = useMemo(

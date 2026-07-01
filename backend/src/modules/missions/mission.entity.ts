@@ -90,6 +90,9 @@ export class Mission {
   @Column({ name: 'trigger_conditions', type: 'simple-json', nullable: true })
   triggerConditions: TriggerCondition[];
 
+  @Column({ name: 'feasibility_override', type: 'simple-json', nullable: true })
+  feasibilityOverride: Record<string, unknown>;
+
   // Template reference
   @Column({ name: 'template_id', nullable: true })
   templateId: string;
