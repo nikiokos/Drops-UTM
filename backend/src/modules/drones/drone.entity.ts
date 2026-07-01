@@ -66,6 +66,25 @@ export class Drone {
   @Column({ name: 'max_payload', type: 'real', nullable: true })
   maxPayload: number;
 
+  // ── Energy & performance profile (for mission feasibility) ──
+  @Column({ name: 'battery_capacity_wh', type: 'real', nullable: true })
+  batteryCapacityWh: number;
+
+  @Column({ name: 'hover_power_w', type: 'real', nullable: true })
+  hoverPowerW: number;
+
+  @Column({ name: 'cruise_power_w', type: 'real', nullable: true })
+  cruisePowerW: number;
+
+  @Column({ name: 'cruise_speed_ms', type: 'real', nullable: true })
+  cruiseSpeedMs: number;
+
+  @Column({ name: 'battery_health_pct', type: 'real', default: 100 })
+  batteryHealthPct: number;
+
+  @Column({ name: 'wind_tolerance_ms', type: 'real', nullable: true })
+  windToleranceMs: number;
+
   @Column({ name: 'communication_protocol', nullable: true })
   communicationProtocol: string;
 
